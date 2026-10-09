@@ -59,3 +59,19 @@ export function formatDate(ts) {
   if (diff === 1) return "Ieri";
   return d.toLocaleDateString("it-IT", { day: "numeric", month: "short" });
 }
+
+const SB_KEY = "note-bibliche-sidebar";
+export const loadSidebar = () => {
+  try {
+    return localStorage.getItem(SB_KEY) !== "closed";
+  } catch {
+    return true;
+  }
+};
+export const saveSidebar = (open) => {
+  try {
+    localStorage.setItem(SB_KEY, open ? "open" : "closed");
+  } catch {
+    /* ignora */
+  }
+};

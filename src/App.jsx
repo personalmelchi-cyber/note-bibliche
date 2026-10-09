@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, ChevronLeft, Plus, Search, Trash2, X } from "lucide-react";
+import { BookOpen, ChevronLeft, PanelLeftClose, PanelLeftOpen, Plus, Search, Trash2, X } from "lucide-react";
 import AutoTextarea from "./components/AutoTextarea.jsx";
 import TextBlock from "./components/TextBlock.jsx";
 import VerseBlock from "./components/VerseBlock.jsx";
 import VerseSearchModal from "./components/VerseSearchModal.jsx";
 import { insertVerse, noteSearchText, notePreview, removeBlock, textBlock } from "./blocks.js";
-import { formatDate, loadNotes, saveNotes } from "./store.js";
+import { formatDate, loadNotes, loadSidebar, saveNotes, saveSidebar } from "./store.js";
 
 export default function App() {
   const [notes, setNotes] = useState(loadNotes);
@@ -15,6 +15,13 @@ export default function App() {
   const [newId, setNewId] = useState(null); // nota appena creata: il cursore parte dal titolo
   // Su telefono si vede una schermata alla volta, come Note di Apple.
   const [view, setView] = useState("list");
+  // Su schermo largo l'elenco a sinistra si può chiudere; la scelta resta salvata.
+  const [sidebarOpen, setSidebarOpen] = useState(loadSidebar);
+  const toggleSidebar = () =>
+    setSidebarOpen((v) => {
+      saveSidebar(!v);
+      return !v;
+    });
 
   // Dove si trova il cursore (blocco di testo + posizione). Serve a "Versetto"
   // per inserire il passo nel punto giusto. È un ref: cambia a ogni tocco senza rifare il disegno.
@@ -109,12 +116,12 @@ export default function App() {
     <div className="h-[100dvh] w-full flex overflow-hidden bg-bg text-fg">
       {/* ELENCO */}
       <aside
-        className={`${view === "editor" ? "hidden" : "flex"} sm:flex w-full sm:w-80 shrink-0 flex-col bg-panel border-r border-line`}
+        className={`${view === "editor" ? "hidden" : "flex"} ${sidebarOpen ? "sm:flex" : "sm:hidden"} w-full sm:w-80 shrink-0 flex-col bg-panel border-r border-line`}
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <h1 className="px-4 pt-3 pb-1 text-[32px] font-bold sm:hidden">Note</h1>
-        <div className="p-3">
-          <div className="flex items-center gap-2 rounded-xl bg-chip px-2.5 py-2">
+        <div className="flex items-center gap-1 p-3">
+          <div className="flex flex-1 min-w-0 items-center gap-2 rounded-xl bg-chip px-2.5 py-2">
             <Search size={16} className="text-muted" />
             <input
               value={search}
@@ -128,6 +135,13 @@ export default function App() {
               </button>
             )}
           </div>
+          <button
+            onClick={toggleSidebar}
+            className="hidden sm:block shrink-0 p-2 text-muted active:opacity-60"
+            aria-label="Chiudi elenco note"
+          >
+            <PanelLeftClose size={20} />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
@@ -174,11 +188,23 @@ export default function App() {
             <header className="flex items-center justify-between px-2 sm:px-4 py-2 border-b border-line">
               <button
                 onClick={() => setView("list")}
-                className="flex items-center rounded-lg px-1 py-1 text-[17px] text-accent active:opacity-60 sm:invisible"
+                className="flex items-center rounded-lg px-1 py-1 text-[17px] text-accent active:opacity-60 sm:hidden"
               >
                 <ChevronLeft size={24} />
                 Note
               </button>
+              {sidebarOpen ? (
+                <span className="hidden sm:block" />
+              ) : (
+                <div className="hidden sm:flex items-center">
+                  <button onClick={toggleSidebar} className="p-2 text-accent active:opacity-60" aria-label="Apri elenco note">
+                    <PanelLeftOpen size={20} />
+                  </button>
+                  <button onClick={addNote} className="p-2 text-accent active:opacity-60" aria-label="Nuova nota">
+                    <Plus size={22} />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center">
                 {/* onMouseDown: non togliere il cursore dal testo quando si tocca il pulsante */}
                 <button
@@ -239,7 +265,18 @@ export default function App() {
             </div>
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center text-[15px] text-muted">Seleziona o crea una nota</div>
+          <div className="relative flex flex-1 items-center justify-center text-[15px] text-muted">
+            {!sidebarOpen && (
+              <button
+                onClick={toggleSidebar}
+                className="absolute left-3 top-3 hidden sm:block p-2 text-accent active:opacity-60"
+                aria-label="Apri elenco note"
+              >
+                <PanelLeftOpen size={20} />
+              </button>
+            )}
+            Seleziona o crea una nota
+          </div>
         )}
       </main>
 
