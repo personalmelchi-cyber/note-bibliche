@@ -245,8 +245,9 @@ export default function App() {
             </header>
 
             <div
+              data-scroll
               className="flex-1 overflow-y-auto"
-              style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
+              style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom) + var(--kb, 0px))" }}
             >
               <div className="mx-auto w-full max-w-2xl px-5 sm:px-8 pt-4">
                 <p className="mb-3 text-center text-[12px] text-muted">

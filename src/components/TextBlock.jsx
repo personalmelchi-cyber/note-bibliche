@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { blockHtml } from "../blocks.js";
-import { cleanHtml, getOffset, htmlToText, setCaret } from "../richtext.js";
+import { cleanHtml, getOffset, htmlToText, keepCaretVisible, setCaret } from "../richtext.js";
 
 // Un paragrafo di testo della nota, con formattazione (grassetto, elenchi, evidenziatore…).
 // Comunica sempre dove si trova il cursore, così "Versetto" sa dove inserire il passo
@@ -45,6 +45,7 @@ export default function TextBlock({ block, placeholder, minRows = 1, focusReq, o
     const html = cleanHtml(el.innerHTML);
     onChange(block.id, { html, text: htmlToText(html) });
     report();
+    requestAnimationFrame(keepCaretVisible); // la riga nuova non deve finire sotto la barra
   };
 
   const onKeyDown = (e) => {
@@ -78,15 +79,24 @@ export default function TextBlock({ block, placeholder, minRows = 1, focusReq, o
       suppressContentEditableWarning
       role="textbox"
       aria-multiline="true"
-      className="rich text-[18px] leading-relaxed"
-      style={{ minHeight: `${minRows * 1.625}em` }}
+      className="rich text-[16px] leading-[1.4]"
+      style={{ minHeight: `${minRows * 1.4}em` }}
       onInput={onInput}
       onKeyDown={onKeyDown}
       onPaste={onPaste}
-      onKeyUp={report}
+      onKeyUp={() => {
+        report();
+        keepCaretVisible();
+      }}
       onMouseUp={report}
-      onTouchEnd={report}
-      onFocus={report}
+      onTouchEnd={() => {
+        report();
+        setTimeout(keepCaretVisible, 350); // dopo che la tastiera è salita
+      }}
+      onFocus={() => {
+        report();
+        setTimeout(keepCaretVisible, 350);
+      }}
     />
   );
 }

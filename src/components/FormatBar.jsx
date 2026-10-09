@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bold, Highlighter, Italic, List, ListOrdered, Strikethrough, X } from "lucide-react";
-import { PALETTE, getRange, highlightCss, setRange } from "../richtext.js";
+import { PALETTE, getRange, highlightCss, keepCaretVisible, setRange } from "../richtext.js";
 
 const inRich = () => !!document.activeElement?.closest?.("[data-rich]");
 
@@ -19,6 +19,7 @@ function useKeyboardInset() {
       const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
       const standalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
       if (kb > 0 && ios && !standalone) kb += 48;
+      document.documentElement.style.setProperty("--kb", `${kb}px`); // la nota ne tiene conto nello spazio in fondo
       setInset(kb);
     };
     // su iPhone la tastiera arriva con un'animazione: si ricontrolla finché non si ferma
@@ -50,6 +51,13 @@ export default function FormatBar() {
   const [active, setActive] = useState({});
   const [picker, setPicker] = useState(false);
   const hideTimer = useRef(null);
+
+  // Quando la barra compare o la tastiera cambia altezza, la riga in cui si scrive deve restare visibile.
+  useEffect(() => {
+    if (!visible) return;
+    const t = setTimeout(keepCaretVisible, 60);
+    return () => clearTimeout(t);
+  }, [visible, inset, picker]);
 
   const refresh = useCallback(() => {
     clearTimeout(hideTimer.current);

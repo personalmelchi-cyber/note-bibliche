@@ -247,3 +247,30 @@ export function splitBlock(block, pos) {
     after: { html: after, text: htmlToText(after) },
   };
 }
+
+/**
+ * Fa scorrere la nota in modo che la riga in cui si scrive resti visibile,
+ * sopra la barra di formattazione e sopra la tastiera.
+ */
+export function keepCaretVisible() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount) return;
+  const node = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+  const scroller = node?.closest?.("[data-scroll]");
+  if (!scroller) return;
+
+  const range = sel.getRangeAt(0).cloneRange();
+  range.collapse(false);
+  let rect = range.getClientRects()[0] || range.getBoundingClientRect();
+  if (!rect || (rect.height === 0 && rect.top === 0)) rect = node.getBoundingClientRect(); // riga vuota
+
+  const vv = window.visualViewport;
+  const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+  const bar = document.querySelector("[role=toolbar]");
+  const barShown = bar && bar.parentElement.getAttribute("aria-hidden") === "false";
+  const limit = Math.min(barShown ? bar.getBoundingClientRect().top : Infinity, visibleBottom) - 24;
+  const topLimit = scroller.getBoundingClientRect().top + 8;
+
+  if (rect.bottom > limit) scroller.scrollTop += rect.bottom - limit;
+  else if (rect.top < topLimit) scroller.scrollTop -= topLimit - rect.top;
+}
