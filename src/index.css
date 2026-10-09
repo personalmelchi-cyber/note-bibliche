@@ -2,38 +2,52 @@
 
 /* Colori ispirati a Note di Apple. Il tema segue quello del telefono
    (scuro come nel tuo screenshot, chiaro altrimenti). */
+/* Colori del nuovo design (bianco caldo + ocra). Il tema segue quello del telefono. */
 :root {
   --bg: #ffffff;
-  --panel: #f6f6f7;
-  --fg: #1c1c1e;
-  --muted: #8e8e93;
-  --line: #e5e5ea;
-  --accent: #d98e04;
+  --panel: #f7f7f5;
+  --fg: #1a1a1a;
+  --muted: #8a8a85;
+  --line: #e9e9e4;
+  --accent: #c08a3e;
+  --accent-ink: #8a5a14;
   --bar: #aeaeb2;
-  --chip: #ececf0;
-  --sel: #fdf3d0;
-  --glass-tint: rgba(255, 255, 255, 0.55);
-  --glass-edge: rgba(255, 255, 255, 0.65);
-  --glass-shadow: rgba(60, 60, 90, 0.18);
-  --blob-a: rgba(255, 190, 60, 0.35);
-  --blob-b: rgba(120, 150, 255, 0.30);
+  --chip: #f3f3f0;
+  --sel: #efece4;
+  --glass-tint: rgba(255, 255, 255, 0.6);
+  --glass-edge: rgba(255, 255, 255, 0.7);
+  --glass-shadow: rgba(60, 50, 30, 0.16);
+  --blob-a: rgba(220, 160, 70, 0.22);
+  --blob-b: rgba(120, 150, 255, 0.16);
+  /* sfondi dei versetti */
+  --vbg-orange: #fde5cd;
+  --vbg-ocra: #f6e6ae;
+  --vbg-olive: #e5e9cc;
+  --vbg-beige: #faf1e3;
+  --vbg-gray: #ecece9;
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #1c1c1e;
-    --panel: #121214;
-    --fg: #f2f2f7;
-    --muted: #8e8e93;
-    --line: #38383a;
-    --accent: #ffd60a;
+    --bg: #1a1a19;
+    --panel: #242422;
+    --fg: #f2f2ee;
+    --muted: #8e8e88;
+    --line: #34342f;
+    --accent: #d9a24f;
+    --accent-ink: #e7bb73;
     --bar: #f2f2f7;
-    --chip: #2c2c2e;
-    --sel: #3a3420;
-    --glass-tint: rgba(44, 44, 48, 0.50);
+    --chip: #2a2a28;
+    --sel: #33302a;
+    --glass-tint: rgba(44, 44, 40, 0.52);
     --glass-edge: rgba(255, 255, 255, 0.16);
     --glass-shadow: rgba(0, 0, 0, 0.55);
-    --blob-a: rgba(255, 190, 40, 0.20);
-    --blob-b: rgba(90, 110, 255, 0.28);
+    --blob-a: rgba(217, 162, 79, 0.18);
+    --blob-b: rgba(90, 110, 255, 0.24);
+    --vbg-orange: #45301d;
+    --vbg-ocra: #403818;
+    --vbg-olive: #30361f;
+    --vbg-beige: #3a3326;
+    --vbg-gray: #2f2f2d;
   }
 }
 
@@ -44,6 +58,7 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
   --color-bar: var(--bar);
   --color-chip: var(--chip);
   --color-sel: var(--sel);
@@ -89,6 +104,12 @@
     inset 0 -1px 0 rgba(255, 255, 255, 0.06),
     0 10px 40px var(--glass-shadow);
 }
+}
+/* Vetro più denso: per i piccoli menu sopra al testo, così il testo sotto non disturba. */
+@layer components {
+  .glass-strong {
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+  }
 }
 /* Colori morbidi dietro a tutto: danno qualcosa da sfocare al vetro. */
 .ambient {
@@ -145,6 +166,26 @@
   text-decoration-thickness: 1.5px;
 }
 .rich span[style*="background-color"] {
+  border-radius: 0.25em;
+  padding: 0 0.12em;
+  margin: 0 -0.12em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Testo dei versetti */
+.verse-text sup {
+  font-style: normal;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 0;
+  color: var(--muted);
+  margin-right: 2px;
+  vertical-align: baseline;
+  position: relative;
+  top: -0.55em;
+}
+.verse-text span[style*="background-color"] {
   border-radius: 0.25em;
   padding: 0 0.12em;
   margin: 0 -0.12em;

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bold, Highlighter, Italic, List, ListOrdered, Strikethrough, X } from "lucide-react";
-import { PALETTE, getRange, highlightCss, keepCaretVisible, setRange } from "../richtext.js";
+import { PALETTE, getRange, getVerseSelection, highlightCss, highlightRange, keepCaretVisible, cleanVerseHtml, setRange } from "../richtext.js";
 
 const inRich = () => !!document.activeElement?.closest?.("[data-rich]");
 
@@ -40,23 +40,29 @@ function useKeyboardInset() {
 }
 
 // Barra di formattazione a "nuvoletta": appare quando si scrive e resta sopra la tastiera.
-export default function FormatBar() {
+export default function FormatBar({ onVerseChange }) {
   const inset = useKeyboardInset();
   const [visible, setVisible] = useState(false);
   const [active, setActive] = useState({});
   const [picker, setPicker] = useState(false);
+  const [mode, setMode] = useState("text"); // "text": si scrive; "verse": si sta selezionando un versetto
   const hideTimer = useRef(null);
 
   // Quando la barra compare o la tastiera cambia altezza, la riga in cui si scrive deve restare visibile.
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || mode === "verse") return;
     const t = setTimeout(keepCaretVisible, 60);
     return () => clearTimeout(t);
-  }, [visible, inset, picker]);
+  }, [visible, inset, picker, mode]);
 
   const refresh = useCallback(() => {
     clearTimeout(hideTimer.current);
-    if (inRich()) {
+    if (getVerseSelection()) {
+      // testo di un versetto selezionato: qui si può solo evidenziare
+      setMode("verse");
+      setVisible(true);
+    } else if (inRich()) {
+      setMode("text");
       setVisible(true);
       const q = (c) => {
         try {
@@ -75,13 +81,18 @@ export default function FormatBar() {
     } else {
       // piccolo ritardo: passando da un paragrafo all'altro la barra non deve lampeggiare
       hideTimer.current = setTimeout(() => {
-        if (!inRich()) {
+        if (!inRich() && !getVerseSelection()) {
           setVisible(false);
           setPicker(false);
         }
       }, 120);
     }
   }, []);
+
+  // Selezionando un versetto i colori compaiono subito.
+  useEffect(() => {
+    if (mode === "verse" && visible) setPicker(true);
+  }, [mode, visible]);
 
   useEffect(() => {
     document.addEventListener("selectionchange", refresh);
@@ -104,6 +115,17 @@ export default function FormatBar() {
     refresh();
   };
   const highlight = (name) => {
+    if (mode === "verse") {
+      const vs = getVerseSelection();
+      if (vs) {
+        highlightRange(vs.root, vs.range, name);
+        window.getSelection().removeAllRanges();
+        if (onVerseChange && vs.id) onVerseChange(vs.id, cleanVerseHtml(vs.root.innerHTML));
+      }
+      setPicker(false);
+      refresh();
+      return;
+    }
     // lo stile in CSS serve solo per l'evidenziatore: grassetto e corsivo restano tag semplici
     document.execCommand("styleWithCSS", false, true);
     document.execCommand("hiliteColor", false, name ? highlightCss(name) : "transparent");
@@ -116,7 +138,7 @@ export default function FormatBar() {
   const keep = (e) => e.preventDefault();
   const btn = (on) =>
     `flex size-10 items-center justify-center rounded-full transition-colors active:opacity-60 ${
-      on ? "bg-accent/25 text-accent" : "text-fg"
+      on ? "bg-accent text-white" : "text-fg"
     }`;
 
   return (
@@ -161,6 +183,8 @@ export default function FormatBar() {
         aria-label="Formattazione"
         className={`glass flex items-center gap-0.5 rounded-full px-2 py-1.5 ${visible ? "pointer-events-auto" : ""}`}
       >
+        {mode === "text" && (
+          <>
         <button tabIndex={visible ? 0 : -1} onMouseDown={keep} onClick={() => run("bold")} aria-label="Grassetto" aria-pressed={!!active.bold} className={btn(active.bold)}>
           <Bold size={19} />
         </button>
@@ -178,6 +202,8 @@ export default function FormatBar() {
           <ListOrdered size={19} />
         </button>
         <span className="mx-1 h-5 w-px bg-line" />
+          </>
+        )}
         <button tabIndex={visible ? 0 : -1} onMouseDown={keep} onClick={() => setPicker((v) => !v)} aria-label="Evidenziatore" aria-expanded={picker} className={btn(picker)}>
           <Highlighter size={19} />
         </button>

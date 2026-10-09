@@ -75,3 +75,20 @@ export const saveSidebar = (open) => {
     /* ignora */
   }
 };
+
+const DAY = 86400000;
+/** Ora di oggi, giorno della settimana negli ultimi 7 giorni, altrimenti la data breve. */
+export function rowTime(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(now) - day(d)) / DAY);
+  if (diff === 0) return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  if (diff > 0 && diff < 7) {
+    const w = d.toLocaleDateString("it-IT", { weekday: "short" }).replace(".", "");
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }
+  return d.toLocaleDateString("it-IT", { day: "numeric", month: "short" }).replace(".", "");
+}
+/** "Questa settimana" = ultimi 7 giorni, il resto "Più vecchie". */
+export const isThisWeek = (ts) => Date.now() - ts < 7 * DAY;

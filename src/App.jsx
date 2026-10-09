@@ -1,13 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { BookOpen, ChevronLeft, PanelLeftClose, PanelLeftOpen, Plus, Search, Trash2, X } from "lucide-react";
+import { Bookmark, ChevronLeft, PanelLeftClose, PanelLeftOpen, Plus, Search, Trash2, X } from "lucide-react";
 import AutoTextarea from "./components/AutoTextarea.jsx";
 import TextBlock from "./components/TextBlock.jsx";
+import Logo from "./components/Logo.jsx";
 import FormatBar from "./components/FormatBar.jsx";
 import VerseBlock from "./components/VerseBlock.jsx";
 import VerseSearchModal from "./components/VerseSearchModal.jsx";
 import { insertVerse, noteSearchText, notePreview, removeBlock, textBlock } from "./blocks.js";
 import { splitBlock } from "./richtext.js";
-import { formatDate, loadNotes, loadSidebar, saveNotes, saveSidebar } from "./store.js";
+import { isThisWeek, loadNotes, loadSidebar, rowTime, saveNotes, saveSidebar } from "./store.js";
 
 export default function App() {
   const [notes, setNotes] = useState(loadNotes);
@@ -79,6 +80,16 @@ export default function App() {
     return q ? sorted.filter((n) => noteSearchText(n).includes(q)) : sorted;
   }, [sorted, search]);
 
+  // l'elenco è diviso in "Questa settimana" e "Più vecchie"
+  const groups = useMemo(
+    () =>
+      [
+        { label: "Questa settimana", items: filtered.filter((n) => isThisWeek(n.updatedAt)) },
+        { label: "Più vecchie", items: filtered.filter((n) => !isThisWeek(n.updatedAt)) },
+      ].filter((g) => g.items.length),
+    [filtered]
+  );
+
   const update = useCallback(
     (patch) => {
       const id = shown?.id;
@@ -94,6 +105,21 @@ export default function App() {
         prev.map((n) =>
           n.id === id
             ? { ...n, blocks: n.blocks.map((b) => (b.id === blockId ? { ...b, ...patch } : b)), updatedAt: Date.now() }
+            : n
+        )
+      );
+    },
+    [shown?.id]
+  );
+
+  // Evidenziatore sui versetti: si salva l'HTML con le evidenziazioni dentro il versetto.
+  const editVerse = useCallback(
+    (blockId, patch) => {
+      const id = shown?.id;
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === id
+            ? { ...n, blocks: n.blocks.map((b) => (b.id === blockId ? { ...b, verse: { ...b.verse, ...patch } } : b)), updatedAt: Date.now() }
             : n
         )
       );
@@ -142,9 +168,20 @@ export default function App() {
       >
         {/* larghezza fissa su desktop: mentre il pannello si chiude il contenuto non si schiaccia */}
         <div className="flex min-h-0 flex-1 flex-col sm:w-80 sm:shrink-0">
-        <h1 className="px-4 pt-3 pb-1 text-[32px] font-bold sm:hidden">Note</h1>
-        <div className="flex items-center gap-1 p-3">
-          <div className="flex flex-1 min-w-0 items-center gap-2 rounded-xl bg-chip px-2.5 py-2">
+        <div className="flex items-center gap-2.5 px-5 pt-4">
+          <Logo size={32} />
+          <span className="text-[22px] font-bold tracking-tight">scribae</span>
+          <button
+            onClick={toggleSidebar}
+            className="ml-auto hidden sm:block shrink-0 p-2 text-muted active:opacity-60"
+            aria-label="Chiudi elenco note"
+          >
+            <PanelLeftClose size={20} />
+          </button>
+        </div>
+        <h1 className="px-5 pt-3 pb-3 text-[40px] font-extrabold leading-none tracking-tight">Note</h1>
+        <div className="px-4 pb-2">
+          <div className="flex items-center gap-2 rounded-xl bg-chip px-3 py-2.5">
             <Search size={16} className="text-muted" />
             <input
               value={search}
@@ -158,45 +195,50 @@ export default function App() {
               </button>
             )}
           </div>
-          <button
-            onClick={toggleSidebar}
-            className="hidden sm:block shrink-0 p-2 text-muted active:opacity-60"
-            aria-label="Chiudi elenco note"
-          >
-            <PanelLeftClose size={20} />
-          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto px-3 pb-3">
           {filtered.length === 0 && (
             <p className="mt-10 text-center text-[15px] text-muted">{search ? "Nessuna nota trovata" : "Nessuna nota"}</p>
           )}
-          {filtered.map((n) => (
-            <button
-              key={n.id}
-              onClick={() => open(n.id)}
-              className={`block w-full text-left px-4 py-3 border-b border-line active:opacity-60 ${
-                n.id === shown?.id ? "sm:bg-sel" : ""
-              }`}
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate text-[16px] font-semibold">{n.title || "Nuova nota"}</span>
-                <span className="shrink-0 text-[12px] text-muted">{formatDate(n.updatedAt)}</span>
+          {groups.map((g) => (
+            <section key={g.label}>
+              <h2 className="px-2 pt-4 pb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted">{g.label}</h2>
+              <div className="overflow-hidden rounded-2xl bg-panel/80">
+                {g.items.map((n, i) => (
+                  <button
+                    key={n.id}
+                    onClick={() => open(n.id)}
+                    className={`block w-full px-4 py-3 text-left active:opacity-60 ${i ? "border-t border-line" : ""} ${
+                      n.id === shown?.id ? "sm:bg-sel" : ""
+                    }`}
+                  >
+                    <span className="block truncate text-[16.5px] font-bold">{n.title || "Nuova nota"}</span>
+                    <span className="mt-0.5 flex gap-2 text-[14px] text-muted">
+                      <span className="shrink-0">{rowTime(n.updatedAt)}</span>
+                      <span className="truncate">{notePreview(n) || "Nessun testo aggiuntivo"}</span>
+                    </span>
+                  </button>
+                ))}
               </div>
-              <p className="truncate text-[14px] text-muted">{notePreview(n) || "Nessun testo aggiuntivo"}</p>
-            </button>
+            </section>
           ))}
         </div>
 
         <div
-          className="flex items-center justify-between px-4 pt-2 border-t border-line"
-          style={{ paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))" }}
+          className="relative flex shrink-0 items-center justify-center border-t border-line px-4 pt-3"
+          style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))", minHeight: "4.5rem" }}
         >
           <span className="text-[13px] text-muted">
             {notes.length} {notes.length === 1 ? "nota" : "note"}
           </span>
-          <button onClick={addNote} className="p-2 text-accent active:opacity-60" aria-label="Nuova nota">
-            <Plus size={24} />
+          <button
+            onClick={addNote}
+            className="absolute right-4 top-1/2 flex size-[52px] -translate-y-1/2 items-center justify-center rounded-full bg-accent text-white shadow-lg shadow-black/15 active:scale-95 transition-transform"
+            style={{ marginTop: "calc(-1 * env(safe-area-inset-bottom) / 2)" }}
+            aria-label="Nuova nota"
+          >
+            <Plus size={26} strokeWidth={2.4} />
           </button>
         </div>
               </div>
@@ -209,10 +251,10 @@ export default function App() {
       >
         {shown ? (
           <>
-            <header className="flex items-center justify-between px-2 sm:px-4 py-2 border-b border-line">
+            <header className="flex items-center justify-between px-2 sm:px-4 py-2.5 border-b border-line">
               <button
                 onClick={() => setView("list")}
-                className="flex items-center rounded-lg px-1 py-1 text-[17px] text-accent active:opacity-60 sm:hidden"
+                className="flex items-center rounded-lg px-1 py-1 text-[17px] text-accent-ink active:opacity-60 sm:hidden"
               >
                 <ChevronLeft size={24} />
                 Note
@@ -234,12 +276,12 @@ export default function App() {
                 <button
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={openModal}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[15px] font-medium text-accent active:opacity-60"
+                  className="flex items-center gap-1.5 rounded-full bg-accent/15 px-3.5 py-2 text-[15px] font-semibold text-accent-ink active:opacity-60"
                 >
-                  <BookOpen size={17} /> Versetto
+                  <Bookmark size={17} fill="currentColor" /> Versetto
                 </button>
-                <button onClick={remove} className="p-2 text-muted active:text-fg" aria-label="Elimina nota">
-                  <Trash2 size={17} />
+                <button onClick={remove} className="ml-1 p-2.5 text-muted active:text-fg" aria-label="Elimina nota">
+                  <Trash2 size={19} />
                 </button>
               </div>
             </header>
@@ -250,8 +292,9 @@ export default function App() {
               style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom) + var(--kb, 0px))" }}
             >
               <div className="mx-auto w-full max-w-2xl px-5 sm:px-8 pt-4">
-                <p className="mb-3 text-center text-[12px] text-muted">
-                  {new Date(shown.updatedAt).toLocaleString("it-IT", { dateStyle: "long", timeStyle: "short" })}
+                <p className="mb-3 text-center text-[13px] text-muted">
+                  {new Date(shown.updatedAt).toLocaleDateString("it-IT", { dateStyle: "long" })} ·{" "}
+                  {new Date(shown.updatedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
                 </p>
                 <AutoTextarea
                   key={shown.id}
@@ -266,12 +309,12 @@ export default function App() {
                     }
                   }}
                   placeholder="Titolo"
-                  className="mb-2 text-[26px] font-bold leading-tight"
+                  className="mb-3 text-[30px] font-extrabold leading-tight tracking-tight"
                 />
 
                 {shown.blocks.map((b, i) =>
                   b.type === "verse" ? (
-                    <VerseBlock key={b.id} verse={b.verse} onRemove={() => update({ blocks: removeBlock(shown.blocks, b.id) })} />
+                    <VerseBlock key={b.id} id={b.id} verse={b.verse} onColor={(bg) => editVerse(b.id, { bg })} onRemove={() => update({ blocks: removeBlock(shown.blocks, b.id) })} />
                   ) : (
                     <TextBlock
                       key={b.id}
@@ -305,7 +348,7 @@ export default function App() {
         )}
       </main>
 
-      {shown && <FormatBar />}
+      {shown && <FormatBar onVerseChange={(id, html) => editVerse(id, { html })} />}
       {showModal && <VerseSearchModal onInsert={addVerse} onClose={closeModal} closing={modalClosing} />}
     </div>
   );

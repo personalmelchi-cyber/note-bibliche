@@ -83,8 +83,10 @@ test("ricerca e anteprima", () => {
   const n = { title: "Titolo", blocks: [textBlock("Uno\ndue"), verseBlock(verse("Luca 1:76")), textBlock("")] };
   assert.ok(noteSearchText(n).includes("luca 1:76"));
   assert.ok(noteSearchText(n).includes("testo"));
-  assert.equal(notePreview(n), "Uno");
-  assert.equal(notePreview({ title: "", blocks: [textBlock(""), verseBlock(verse("Luca 1:76")), textBlock("")] }), "📖 Luca 1:76");
+  assert.equal(notePreview(n), "Luca 1:76 · Uno");
+  assert.equal(notePreview({ title: "", blocks: [textBlock(""), verseBlock(verse("Luca 1:76")), textBlock("")] }), "Luca 1:76");
+  assert.equal(notePreview({ title: "", blocks: [textBlock("Solo testo")] }), "Solo testo");
+  assert.equal(notePreview({ title: "", blocks: [textBlock(""), verseBlock(verse("Vangelo secondo Giovanni 3:16")), textBlock("")] }), "Giovanni 3:16");
 });
 
 test("con testo formattato: il versetto spezza anche l'HTML con la funzione di divisione", () => {

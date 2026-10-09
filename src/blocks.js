@@ -9,6 +9,13 @@ export const textBlock = (text = "", html) => (html === undefined ? { id: uid(),
 export const verseBlock = (verse) => ({ id: uid(), type: "verse", verse });
 
 export const escapeHtml = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/** Riferimento breve, senza "Vangelo secondo": "Giovanni 3:16". */
+export const verseLabel = (verse) => verse.human.replace(/^(Vangelo secondo|Євангеліє від)\s+/i, "");
+
+/** HTML del testo di un versetto: numeri in apice + testo. Se è stato evidenziato si usa quello salvato. */
+export const verseHtml = (verse) =>
+  typeof verse.html === "string" ? verse.html : verse.verses.map((v) => `<sup>${v.n}</sup>${escapeHtml(v.t)} `).join("");
+
 /** HTML di un blocco di testo: quello formattato se c'è, altrimenti il testo semplice. */
 export const blockHtml = (b) => (typeof b.html === "string" ? b.html : escapeHtml(b.text || "").replace(/\n/g, "<br>"));
 
@@ -97,10 +104,10 @@ export function noteSearchText(n) {
   return parts.join("\n").toLowerCase();
 }
 
-/** Riga di anteprima nell'elenco: primo testo scritto, altrimenti il primo versetto. */
+/** Riga di anteprima nell'elenco: primo versetto citato e primo testo scritto ("Giovanni 3:16 · la grazia…"). */
 export function notePreview(n) {
-  const t = n.blocks.find((b) => b.type === "text" && b.text.trim());
-  if (t) return t.text.trim().split("\n")[0];
   const v = n.blocks.find((b) => b.type === "verse");
-  return v ? `📖 ${v.verse.human}` : "";
+  const t = n.blocks.find((b) => b.type === "text" && b.text.trim());
+  const snippet = t ? t.text.trim().split("\n")[0] : "";
+  return [v ? verseLabel(v.verse) : "", snippet].filter(Boolean).join(" · ");
 }

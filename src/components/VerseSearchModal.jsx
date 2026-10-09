@@ -29,6 +29,21 @@ export default function VerseSearchModal({ onInsert, onClose, closing = false })
     return () => cancelAnimationFrame(id);
   }, []);
   const visible = entered && !closing;
+
+  // Con la tastiera aperta la finestra deve stare nella parte di schermo che si vede, sopra la tastiera.
+  const [box, setBox] = useState(null);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => setBox({ top: Math.round(vv.offsetTop), height: Math.round(vv.height) });
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
   const [query, setQuery] = useState("");
   const [trId, setTrId] = useState(() => {
     const saved = loadTranslation();
@@ -93,13 +108,14 @@ export default function VerseSearchModal({ onInsert, onClose, closing = false })
 
   return (
     <div
+      style={box ? { top: box.top, height: box.height, bottom: "auto" } : undefined}
       className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 transition-opacity duration-200 ease-out motion-reduce:transition-none ${
         visible ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
       onClick={onClose}
     >
       <div
-        className={`flex flex-col w-full sm:max-w-md max-h-[88dvh] bg-bg text-fg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
+        className={`flex flex-col w-full sm:max-w-md max-h-[88%] bg-bg text-fg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
           visible ? "translate-y-0 sm:scale-100 opacity-100" : "translate-y-6 sm:translate-y-0 sm:scale-95 opacity-0"
         }`}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
@@ -121,6 +137,9 @@ export default function VerseSearchModal({ onInsert, onClose, closing = false })
             onChange={(e) => setQuery(e.target.value)}
             placeholder={PLACEHOLDER[lang]}
             enterKeyHint="go"
+            autoComplete="off"
+            name="riferimento-biblico"
+            spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
             className="w-full rounded-xl border border-line bg-panel px-3 py-2.5 text-[16px] outline-none focus:border-accent"

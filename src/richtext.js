@@ -274,3 +274,121 @@ export function keepCaretVisible() {
   if (rect.bottom > limit) scroller.scrollTop += rect.bottom - limit;
   else if (rect.top < topLimit) scroller.scrollTop -= topLimit - rect.top;
 }
+
+// ---------- Versetti: qui si può solo evidenziare ----------
+
+function walkVerse(src, dst) {
+  for (const n of [...src.childNodes]) {
+    if (n.nodeType === 3) {
+      dst.appendChild(document.createTextNode(n.nodeValue));
+    } else if (n.nodeType === 1) {
+      let el = null;
+      if (n.tagName === "SUP") el = mk("sup");
+      else if (n.tagName === "SPAN") {
+        const color = colorName(n.style && n.style.backgroundColor);
+        if (color) {
+          el = mk("span");
+          el.setAttribute("style", `background-color: ${highlightCss(color)}`);
+        }
+      }
+      if (el) {
+        walkVerse(n, el);
+        dst.appendChild(el);
+      } else walkVerse(n, dst);
+    }
+  }
+}
+
+const isHl = (n) => n && n.nodeType === 1 && n.tagName === "SPAN" && n.hasAttribute("style");
+
+function mergeSpans(root) {
+  for (const sp of [...root.querySelectorAll("span")]) {
+    if (!sp.isConnected || !sp.firstChild) continue;
+    let next = sp.nextSibling;
+    while (isHl(next) && next.getAttribute("style") === sp.getAttribute("style")) {
+      while (next.firstChild) sp.appendChild(next.firstChild);
+      const after = next.nextSibling;
+      next.remove();
+      next = after;
+    }
+  }
+  for (const sp of [...root.querySelectorAll("span")]) if (!sp.firstChild) sp.remove();
+  root.normalize();
+}
+
+/** Ripulisce l'HTML di un versetto: restano solo numeri in apice ed evidenziazioni. */
+export function cleanVerseHtml(html) {
+  const src = mk("div");
+  src.innerHTML = html;
+  const dst = mk("div");
+  walkVerse(src, dst);
+  mergeSpans(dst);
+  return dst.innerHTML;
+}
+
+// Isola `node` in modo che non stia dentro un evidenziatore con altro testo accanto.
+function lift(node) {
+  const p = node.parentNode;
+  if (!isHl(p)) return;
+  const before = [];
+  const after = [];
+  let seen = false;
+  for (const c of [...p.childNodes]) {
+    if (c === node) seen = true;
+    else (seen ? after : before).push(c);
+  }
+  const parent = p.parentNode;
+  if (before.length) {
+    const b = p.cloneNode(false);
+    before.forEach((c) => b.appendChild(c));
+    parent.insertBefore(b, p);
+  }
+  parent.insertBefore(node, p);
+  if (after.length) {
+    const a = p.cloneNode(false);
+    after.forEach((c) => a.appendChild(c));
+    parent.insertBefore(a, p);
+  }
+  p.remove();
+}
+
+/**
+ * Evidenzia (o toglie l'evidenziazione, con name = null) il testo selezionato dentro `root`.
+ * Lavora sui singoli pezzi di testo, quindi funziona anche a cavallo di più versetti.
+ */
+export function highlightRange(root, range, name) {
+  const nodes = [];
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let c;
+  while ((c = w.nextNode())) {
+    if (!range.intersectsNode(c)) continue;
+    const start = c === range.startContainer ? range.startOffset : 0;
+    const end = c === range.endContainer ? range.endOffset : c.nodeValue.length;
+    if (start < end) nodes.push({ node: c, start, end });
+  }
+  for (const { node, start, end } of nodes) {
+    let target = node;
+    if (end < node.nodeValue.length) node.splitText(end);
+    if (start > 0) target = node.splitText(start);
+    lift(target);
+    if (name) {
+      const span = mk("span");
+      span.setAttribute("style", `background-color: ${highlightCss(name)}`);
+      target.parentNode.insertBefore(span, target);
+      span.appendChild(target);
+    }
+  }
+  mergeSpans(root);
+}
+
+/** Se la selezione è dentro il testo di un versetto: { root, range, id }, altrimenti null. */
+export function getVerseSelection() {
+  const sel = window.getSelection();
+  if (!sel || !sel.rangeCount || sel.isCollapsed) return null;
+  const up = (n) => (n && n.nodeType === 1 ? n : n && n.parentElement)?.closest?.("[data-verse-text]");
+  const a = up(sel.anchorNode);
+  const f = up(sel.focusNode);
+  if (!a || a !== f) return null;
+  const fig = a.closest("[data-verse-id]");
+  return { root: a, range: sel.getRangeAt(0).cloneRange(), id: fig ? fig.getAttribute("data-verse-id") : null };
+}
