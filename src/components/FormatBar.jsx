@@ -13,7 +13,13 @@ function useKeyboardInset() {
     const update = () => {
       // altezza della pagina "intera" meno la parte visibile sopra la tastiera
       const layoutH = document.documentElement.clientHeight || window.innerHeight;
-      setInset(Math.max(0, Math.round(layoutH - vv.height - vv.offsetTop)));
+      let kb = Math.max(0, Math.round(layoutH - vv.height - vv.offsetTop));
+      // Safari su iPhone (non l'app aggiunta alla Home) mette sopra la tastiera una pillola con l'indirizzo
+      // che la pagina non può misurare: la barra va alzata di quel tanto per non finirci sotto.
+      const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      const standalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
+      if (kb > 0 && ios && !standalone) kb += 48;
+      setInset(kb);
     };
     // su iPhone la tastiera arriva con un'animazione: si ricontrolla finché non si ferma
     const timers = [];
