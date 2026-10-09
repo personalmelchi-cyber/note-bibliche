@@ -19,6 +19,22 @@ export const verseHtml = (verse) =>
 /** HTML di un blocco di testo: quello formattato se c'è, altrimenti il testo semplice. */
 export const blockHtml = (b) => (typeof b.html === "string" ? b.html : escapeHtml(b.text || "").replace(/\n/g, "<br>"));
 
+const asParagraph = (h) => (!h || /^<p[\s>]/.test(h) ? h : `<p>${h}</p>`);
+
+/**
+ * Le note scritte prima dei paragrafi vanno a capo con "\n" o <br>: ogni a-capo era un Invio,
+ * quindi diventa un paragrafo (così prende la spaziatura tra paragrafi). Se non serve, ritorna lo stesso blocco.
+ */
+export function legacyParagraphs(b) {
+  if (b.type !== "text") return b;
+  const src = typeof b.html === "string" ? b.html : escapeHtml(b.text || "");
+  if (/<p[\s>]|<ul|<ol/i.test(src) || !/\n|<br/i.test(src)) return b;
+  const parts = src.split(/\n|<br\s*\/?>/i);
+  while (parts.length && parts[parts.length - 1] === "") parts.pop();
+  if (parts.length < 2) return b;
+  return { ...b, html: parts.map((x) => `<p>${x || "<br>"}</p>`).join("") };
+}
+
 export function normalizeBlocks(blocks) {
   const out = [];
   for (const b of blocks) {
@@ -26,7 +42,9 @@ export function normalizeBlocks(blocks) {
     if (b.type === "text" && last && last.type === "text") {
       const merged = { ...last, text: [last.text, b.text].filter(Boolean).join("\n") };
       if (typeof last.html === "string" || typeof b.html === "string") {
-        merged.html = [blockHtml(last), blockHtml(b)].filter(Boolean).join("<br>");
+        const [x, y] = [blockHtml(last), blockHtml(b)];
+        // con i paragrafi si uniscono come paragrafi, altrimenti con un a-capo
+        merged.html = /<p[\s>]/.test(x + y) ? asParagraph(x) + asParagraph(y) : [x, y].filter(Boolean).join("<br>");
       }
       out[out.length - 1] = merged;
     } else {
@@ -81,9 +99,12 @@ export function insertVerse(blocks, cursor, verse, split) {
 
 export const removeBlock = (blocks, id) => normalizeBlocks(blocks.filter((b) => b.id !== id));
 
-/** Converte le note salvate col vecchio formato (body + verses + bodyAfter). */
+/** Converte le note salvate col vecchio formato (body + verses + bodyAfter) e porta i testi a paragrafi. */
 export function migrateNote(n) {
-  if (Array.isArray(n.blocks)) return n;
+  if (Array.isArray(n.blocks)) {
+    const blocks = n.blocks.map(legacyParagraphs);
+    return blocks.some((b, i) => b !== n.blocks[i]) ? { ...n, blocks } : n;
+  }
   const verses = n.verses || [];
   const blocks = [textBlock(n.body || "")];
   verses.forEach((v, i) => {
@@ -91,7 +112,7 @@ export function migrateNote(n) {
     blocks.push(textBlock(i === verses.length - 1 ? n.bodyAfter || "" : ""));
   });
   const { body, verses: _v, bodyAfter, ...rest } = n;
-  return { ...rest, title: n.title || "", blocks: normalizeBlocks(blocks) };
+  return { ...rest, title: n.title || "", blocks: normalizeBlocks(blocks).map(legacyParagraphs) };
 }
 
 /** Tutto il testo di una nota, per la ricerca. */

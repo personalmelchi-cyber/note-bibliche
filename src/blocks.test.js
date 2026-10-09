@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { insertVerse, migrateNote, normalizeBlocks, removeBlock, textBlock, verseBlock, noteSearchText, notePreview } from "./blocks.js";
+import { insertVerse, legacyParagraphs, migrateNote, normalizeBlocks, removeBlock, textBlock, verseBlock, noteSearchText, notePreview } from "./blocks.js";
 
 const verse = (human) => ({ human, version: "NR06", verses: [{ n: 1, t: "testo" }] });
 const shape = (blocks) => blocks.map((b) => (b.type === "text" ? `T:${b.text}` : `V:${b.verse.human}`));
@@ -108,4 +108,27 @@ test("unendo testi formattati l'HTML si unisce con un a-capo", () => {
   const r = removeBlock([a, v, c], v.id);
   assert.equal(r.length, 1);
   assert.equal(r[0].html, "<b>Su</b><br>Giù");
+});
+
+test("vecchi a-capo diventano paragrafi, una sola volta", () => {
+  const a = legacyParagraphs({ id: "a", type: "text", text: "uno\ndue", html: "uno\ndue" });
+  assert.equal(a.html, "<p>uno</p><p>due</p>");
+  assert.equal(legacyParagraphs(a), a); // già a paragrafi: non cambia
+  const b = legacyParagraphs({ id: "b", type: "text", text: "x\n\ny" });
+  assert.equal(b.html, "<p>x</p><p><br></p><p>y</p>");
+  const solo = { id: "c", type: "text", text: "una riga" };
+  assert.equal(legacyParagraphs(solo), solo);
+  const elenco = { id: "d", type: "text", text: "a", html: "<ul><li>a</li><li>b</li></ul>" };
+  assert.equal(legacyParagraphs(elenco), elenco);
+  // le note già salvate vengono portate a paragrafi al caricamento
+  const n = migrateNote({ id: 1, title: "", blocks: [{ id: "e", type: "text", text: "p1\np2" }] });
+  assert.equal(n.blocks[0].html, "<p>p1</p><p>p2</p>");
+});
+
+test("unendo testi a paragrafi restano paragrafi", () => {
+  const a = { id: "a", type: "text", text: "Su", html: "<p>Su</p>" };
+  const v = verseBlock(verse("A"));
+  const c = textBlock("Giù");
+  const r = removeBlock([a, v, c], v.id);
+  assert.equal(r[0].html, "<p>Su</p><p>Giù</p>");
 });

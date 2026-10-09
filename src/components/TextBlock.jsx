@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { blockHtml } from "../blocks.js";
-import { cleanHtml, getOffset, htmlToText, keepCaretVisible, setCaret } from "../richtext.js";
+import { cleanHtml, getOffset, htmlToText, keepCaretVisible, normalizeParagraphs, setCaret } from "../richtext.js";
 
 // Un paragrafo di testo della nota, con formattazione (grassetto, elenchi, evidenziatore…).
 // Comunica sempre dove si trova il cursore, così "Versetto" sa dove inserire il passo
@@ -42,6 +42,7 @@ export default function TextBlock({ block, placeholder, minRows = 1, focusReq, o
 
   const onInput = () => {
     const el = ref.current;
+    normalizeParagraphs(el);
     const html = cleanHtml(el.innerHTML);
     onChange(block.id, { html, text: htmlToText(html) });
     report();
@@ -49,8 +50,8 @@ export default function TextBlock({ block, placeholder, minRows = 1, focusReq, o
   };
 
   const onKeyDown = (e) => {
-    // A capo: una riga nuova semplice (dentro un elenco ci pensa il browser)
-    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+    // Invio = nuovo paragrafo (dentro un elenco ci pensa il browser). Maiusc+Invio = solo andare a capo.
+    if (e.key === "Enter" && e.shiftKey && !e.nativeEvent.isComposing) {
       const inList = window.getSelection()?.anchorNode?.parentElement?.closest("li");
       if (!inList) {
         e.preventDefault();
@@ -59,12 +60,12 @@ export default function TextBlock({ block, placeholder, minRows = 1, focusReq, o
     }
   };
 
-  // Incollando si tiene solo il testo: niente stili strani da altre app.
+  // Incollando si tiene solo il testo: niente stili strani da altre app. Ogni riga diventa un paragrafo.
   const onPaste = (e) => {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain").replace(/\r\n?/g, "\n");
     text.split("\n").forEach((line, i) => {
-      if (i) document.execCommand("insertLineBreak");
+      if (i) document.execCommand("insertParagraph");
       if (line) document.execCommand("insertText", false, line);
     });
   };
@@ -94,6 +95,7 @@ export default function TextBlock({ block, placeholder, minRows = 1, focusReq, o
         setTimeout(keepCaretVisible, 350); // dopo che la tastiera è salita
       }}
       onFocus={() => {
+        document.execCommand("defaultParagraphSeparator", false, "p");
         report();
         setTimeout(keepCaretVisible, 350);
       }}

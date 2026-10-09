@@ -192,3 +192,12 @@
   -webkit-box-decoration-break: clone;
   box-decoration-break: clone;
 }
+
+/* Paragrafi: un po' di aria in più tra uno e l'altro, per distinguerli */
+.rich p {
+  margin: 0.55em 0 0;
+}
+.rich > p:first-child,
+.rich li > p:first-child {
+  margin-top: 0;
+}

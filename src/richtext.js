@@ -64,9 +64,8 @@ function walk(src, dst) {
         continue;
       case "DIV":
       case "P":
-        walk(n, dst);
-        if (n.nextSibling) dst.appendChild(mk("br"));
-        continue;
+        el = mk("p"); // ogni "a capo con Invio" è un paragrafo
+        break;
       case "SCRIPT":
       case "STYLE":
         continue;
@@ -104,7 +103,11 @@ export function htmlToText(html) {
       if (c.nodeType === 3) out += c.nodeValue;
       else if (c.nodeType === 1) {
         if (c.tagName === "BR") out += "\n";
-        else if (c.tagName === "UL" || c.tagName === "OL") {
+        else if (c.tagName === "P") {
+          nl();
+          go(c);
+          nl();
+        } else if (c.tagName === "UL" || c.tagName === "OL") {
           nl();
           let i = 0;
           for (const li of c.children) {
@@ -142,7 +145,7 @@ const measure = (frag) => {
   let c;
   while ((c = w.nextNode())) {
     if (c.nodeType === 3) n += c.nodeValue.length;
-    else if (c.tagName === "BR") n += 1;
+    else if (c.tagName === "BR" || c.tagName === "P" || c.tagName === "LI") n += 1; // a-capo, paragrafi e voci d'elenco contano 1
   }
   return n;
 };
@@ -175,6 +178,9 @@ function pointAt(root, pos) {
         const p = c.parentNode;
         return [p, Array.prototype.indexOf.call(p.childNodes, c) + 1];
       }
+    } else if (c.tagName === "P" || c.tagName === "LI") {
+      remaining -= 1;
+      if (remaining <= 0) return [c, 0];
     }
   }
   return [root, root.childNodes.length];
@@ -239,7 +245,7 @@ export function splitBlock(block, pos) {
   const b = document.createRange();
   b.selectNodeContents(d);
   b.setStart(n, o);
-  const edge = "(?:<br>|\\s|&nbsp;)+";
+  const edge = "(?:<br>|<p>(?:<br>)?</p>|\\s|&nbsp;)+";
   const before = cleanHtml(ser(a.cloneContents()).replace(new RegExp(edge + "$"), ""));
   const after = cleanHtml(ser(b.cloneContents()).replace(new RegExp("^" + edge), ""));
   return {
@@ -391,4 +397,60 @@ export function getVerseSelection() {
   if (!a || a !== f) return null;
   const fig = a.closest("[data-verse-id]");
   return { root: a, range: sel.getRangeAt(0).cloneRange(), id: fig ? fig.getAttribute("data-verse-id") : null };
+}
+
+const BLOCK_TAGS = new Set(["P", "UL", "OL", "DIV"]);
+
+/**
+ * Dopo il primo Invio il browser lascia la prima riga "nuda" e mette solo le altre in <p>.
+ * Qui si mette anche la prima (e ogni testo isolato) in un paragrafo, tenendo il cursore dov'è.
+ */
+export function normalizeParagraphs(root) {
+  const sel = window.getSelection();
+  const saved =
+    sel && sel.rangeCount && root.contains(sel.anchorNode)
+      ? { a: sel.anchorNode, ao: sel.anchorOffset, f: sel.focusNode, fo: sel.focusOffset }
+      : null;
+  let changed = false;
+
+  // Un <p> che contiene elenchi o altri paragrafi non è valido (il browser lo spezzerebbe): lo si scioglie.
+  for (const p of [...root.querySelectorAll("p")].reverse()) {
+    if (p.isConnected && [...p.children].some((c) => ["UL", "OL", "P", "DIV"].includes(c.tagName))) {
+      while (p.firstChild) p.parentNode.insertBefore(p.firstChild, p);
+      p.remove();
+      changed = true;
+    }
+  }
+
+  const kids = [...root.childNodes];
+  const hasParagraphs = kids.some((n) => n.nodeType === 1 && (n.tagName === "P" || n.tagName === "DIV"));
+  const isLoose = (n) => !(n.nodeType === 1 && BLOCK_TAGS.has(n.tagName));
+  if (hasParagraphs && kids.some(isLoose)) {
+    let run = [];
+    const flush = () => {
+      if (!run.length) return;
+      const blank = run.every((n) => n.nodeType === 3 && !n.nodeValue.trim());
+      if (blank) run.forEach((n) => n.remove());
+      else {
+        const p = document.createElement("p");
+        root.insertBefore(p, run[0]);
+        run.forEach((n) => p.appendChild(n));
+      }
+      run = [];
+    };
+    for (const n of kids) {
+      if (isLoose(n)) run.push(n);
+      else flush();
+    }
+    flush();
+    changed = true;
+  }
+
+  if (changed && saved && saved.a.isConnected && saved.f.isConnected) {
+    try {
+      sel.setBaseAndExtent(saved.a, saved.ao, saved.f, saved.fo);
+    } catch {
+      /* il cursore resta dove il browser l'ha messo */
+    }
+  }
 }
