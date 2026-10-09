@@ -11,7 +11,22 @@ export default function App() {
   const [notes, setNotes] = useState(loadNotes);
   const [activeId, setActiveId] = useState(null);
   const [search, setSearch] = useState("");
-  const [showModal, setShowModal] = useState(false);
+  const [showModal, setShowModal] = useState(false); // il popup è nella pagina
+  const [modalClosing, setModalClosing] = useState(false); // sta sfumando in uscita
+  const closeTimer = useRef(null);
+  const openModal = () => {
+    clearTimeout(closeTimer.current);
+    setModalClosing(false);
+    setShowModal(true);
+  };
+  const closeModal = useCallback(() => {
+    setModalClosing(true);
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => {
+      setShowModal(false);
+      setModalClosing(false);
+    }, 220);
+  }, []);
   const [newId, setNewId] = useState(null); // nota appena creata: il cursore parte dal titolo
   // Su telefono si vede una schermata alla volta, come Note di Apple.
   const [view, setView] = useState("list");
@@ -107,7 +122,7 @@ export default function App() {
     const { blocks, focus } = insertVerse(shown.blocks, cursor.current, passage);
     update({ blocks });
     setFocusReq(focus);
-    setShowModal(false);
+    closeModal();
   };
 
   const lastIndex = shown ? shown.blocks.length - 1 : 0;
@@ -117,9 +132,14 @@ export default function App() {
       <div className="ambient pointer-events-none absolute inset-0" />
       {/* ELENCO */}
       <aside
-        className={`${view === "editor" ? "hidden" : "flex"} ${sidebarOpen ? "sm:flex" : "sm:hidden"} relative z-10 w-full sm:w-80 shrink-0 flex-col glass max-sm:border-0 max-sm:shadow-none sm:m-3 sm:rounded-3xl sm:overflow-hidden`}
+        className={`${view === "editor" ? "hidden" : "flex"} sm:flex relative z-10 w-full shrink-0 flex-col glass max-sm:border-0 max-sm:shadow-none sm:rounded-3xl sm:overflow-hidden sm:transition-[width,margin,opacity,visibility] sm:duration-300 sm:ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
+          sidebarOpen ? "sm:w-80 sm:m-3 sm:opacity-100 sm:visible" : "sm:w-0 sm:m-0 sm:border-0 sm:opacity-0 sm:invisible sm:pointer-events-none"
+        }`}
         style={{ paddingTop: "env(safe-area-inset-top)" }}
+        aria-hidden={!sidebarOpen}
       >
+        {/* larghezza fissa su desktop: mentre il pannello si chiude il contenuto non si schiaccia */}
+        <div className="flex min-h-0 flex-1 flex-col sm:w-80 sm:shrink-0">
         <h1 className="px-4 pt-3 pb-1 text-[32px] font-bold sm:hidden">Note</h1>
         <div className="flex items-center gap-1 p-3">
           <div className="flex flex-1 min-w-0 items-center gap-2 rounded-xl bg-chip px-2.5 py-2">
@@ -177,6 +197,7 @@ export default function App() {
             <Plus size={24} />
           </button>
         </div>
+              </div>
       </aside>
 
       {/* EDITOR */}
@@ -210,7 +231,7 @@ export default function App() {
                 {/* onMouseDown: non togliere il cursore dal testo quando si tocca il pulsante */}
                 <button
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => setShowModal(true)}
+                  onClick={openModal}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[15px] font-medium text-accent active:opacity-60"
                 >
                   <BookOpen size={17} /> Versetto
@@ -281,7 +302,7 @@ export default function App() {
         )}
       </main>
 
-      {showModal && <VerseSearchModal onInsert={addVerse} onClose={() => setShowModal(false)} />}
+      {showModal && <VerseSearchModal onInsert={addVerse} onClose={closeModal} closing={modalClosing} />}
     </div>
   );
 }

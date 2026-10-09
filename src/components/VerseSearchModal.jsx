@@ -21,7 +21,14 @@ const HINTS = {
   ambiguous: "Abbreviazione ambigua: scrivi il nome del libro per esteso.",
 };
 
-export default function VerseSearchModal({ onInsert, onClose }) {
+export default function VerseSearchModal({ onInsert, onClose, closing = false }) {
+  // Dissolvenza: parte trasparente, un attimo dopo compare; in uscita torna trasparente.
+  const [entered, setEntered] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => setEntered(true)));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const visible = entered && !closing;
   const [query, setQuery] = useState("");
   const [trId, setTrId] = useState(() => {
     const saved = loadTranslation();
@@ -85,9 +92,16 @@ export default function VerseSearchModal({ onInsert, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
+    <div
+      className={`fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+        visible ? "opacity-100" : "opacity-0 pointer-events-none"
+      }`}
+      onClick={onClose}
+    >
       <div
-        className="flex flex-col w-full sm:max-w-md max-h-[88dvh] bg-bg text-fg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden"
+        className={`flex flex-col w-full sm:max-w-md max-h-[88dvh] bg-bg text-fg rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
+          visible ? "translate-y-0 sm:scale-100 opacity-100" : "translate-y-6 sm:translate-y-0 sm:scale-95 opacity-0"
+        }`}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         onClick={(e) => e.stopPropagation()}
       >

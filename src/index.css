@@ -78,6 +78,7 @@
 }
 
 /* Effetto "vetro liquido": sfondo semitrasparente, sfocatura forte, bordo luminoso. */
+@layer components {
 .glass {
   background: var(--glass-tint);
   -webkit-backdrop-filter: blur(30px) saturate(190%);
@@ -87,6 +88,7 @@
     inset 0 1px 0 var(--glass-edge),
     inset 0 -1px 0 rgba(255, 255, 255, 0.06),
     0 10px 40px var(--glass-shadow);
+}
 }
 /* Colori morbidi dietro a tutto: danno qualcosa da sfocare al vetro. */
 .ambient {
