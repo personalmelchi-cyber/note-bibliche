@@ -10,34 +10,13 @@ function useKeyboardInset() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => {
-      // altezza della pagina "intera" meno la parte visibile sopra la tastiera
-      const layoutH = document.documentElement.clientHeight || window.innerHeight;
-      let kb = Math.max(0, Math.round(layoutH - vv.height - vv.offsetTop));
-      // Safari su iPhone (non l'app aggiunta alla Home) mette sopra la tastiera una pillola con l'indirizzo
-      // che la pagina non può misurare: la barra va alzata di quel tanto per non finirci sotto.
-      const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-      const standalone = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
-      if (kb > 0 && ios && !standalone) kb += 48;
-      setInset(kb);
-    };
-    // su iPhone la tastiera arriva con un'animazione: si ricontrolla finché non si ferma
-    const timers = [];
-    const settle = () => {
-      update();
-      [80, 200, 400, 700].forEach((ms) => timers.push(setTimeout(update, ms)));
-    };
+    const update = () => setInset(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
-    document.addEventListener("focusin", settle);
-    document.addEventListener("focusout", settle);
     return () => {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
-      document.removeEventListener("focusin", settle);
-      document.removeEventListener("focusout", settle);
-      timers.forEach(clearTimeout);
     };
   }, []);
   return inset;
@@ -119,10 +98,10 @@ export default function FormatBar() {
   return (
     <div
       aria-hidden={!visible}
-      className={`pointer-events-none fixed inset-x-0 z-30 flex flex-col items-center gap-2 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${
+      className={`pointer-events-none fixed inset-x-0 z-30 flex flex-col items-center gap-2 transition-all duration-200 ease-out motion-reduce:transition-none ${
         visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
       }`}
-      style={{ bottom: inset > 0 ? `${inset + 10}px` : "calc(env(safe-area-inset-bottom) + 12px)" }}
+      style={{ bottom: `calc(env(safe-area-inset-bottom) + 12px + ${inset}px)` }}
     >
       {/* colori dell'evidenziatore */}
       <div
