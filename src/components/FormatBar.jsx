@@ -10,13 +10,28 @@ function useKeyboardInset() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setInset(Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)));
+    const update = () => {
+      // altezza della pagina "intera" meno la parte visibile sopra la tastiera
+      const layoutH = document.documentElement.clientHeight || window.innerHeight;
+      setInset(Math.max(0, Math.round(layoutH - vv.height - vv.offsetTop)));
+    };
+    // su iPhone la tastiera arriva con un'animazione: si ricontrolla finché non si ferma
+    const timers = [];
+    const settle = () => {
+      update();
+      [80, 200, 400, 700].forEach((ms) => timers.push(setTimeout(update, ms)));
+    };
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
+    document.addEventListener("focusin", settle);
+    document.addEventListener("focusout", settle);
     return () => {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
+      document.removeEventListener("focusin", settle);
+      document.removeEventListener("focusout", settle);
+      timers.forEach(clearTimeout);
     };
   }, []);
   return inset;
@@ -98,10 +113,10 @@ export default function FormatBar() {
   return (
     <div
       aria-hidden={!visible}
-      className={`pointer-events-none fixed inset-x-0 z-30 flex flex-col items-center gap-2 transition-all duration-200 ease-out motion-reduce:transition-none ${
+      className={`pointer-events-none fixed inset-x-0 z-30 flex flex-col items-center gap-2 transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none ${
         visible ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
       }`}
-      style={{ bottom: `calc(env(safe-area-inset-bottom) + 12px + ${inset}px)` }}
+      style={{ bottom: inset > 0 ? `${inset + 10}px` : "calc(env(safe-area-inset-bottom) + 12px)" }}
     >
       {/* colori dell'evidenziatore */}
       <div
