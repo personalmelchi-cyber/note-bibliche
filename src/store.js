@@ -1,3 +1,5 @@
+import { migrateNote, textBlock } from "./blocks.js";
+
 const KEY = "note-bibliche-v1";
 const TR_KEY = "note-bibliche-translation";
 
@@ -5,9 +7,11 @@ const seed = () => [
   {
     id: Date.now(),
     title: "Benvenuto",
-    body: "Scrivi i tuoi appunti qui. Tocca «Versetto» in alto per inserire un passo biblico, ad esempio Giovanni 3:16 oppure Luca 1:76-80.",
-    verses: [],
-    bodyAfter: "",
+    blocks: [
+      textBlock(
+        "Scrivi i tuoi appunti qui. Metti il cursore dove vuoi e tocca «Versetto» per inserire un passo biblico: il testo prima del cursore resta sopra, quello dopo scende sotto il versetto. Prova con Giovanni 3:16 oppure Luca 1:76-80."
+      ),
+    ],
     updatedAt: Date.now(),
   },
 ];
@@ -15,7 +19,8 @@ const seed = () => [
 export function loadNotes() {
   try {
     const parsed = JSON.parse(localStorage.getItem(KEY) || "null");
-    if (Array.isArray(parsed)) return parsed;
+    if (Array.isArray(parsed) && parsed.length) return parsed.map(migrateNote);
+    if (Array.isArray(parsed)) return parsed; // elenco vuoto: l'utente ha eliminato tutto
   } catch {
     /* dati illeggibili: si riparte da zero */
   }

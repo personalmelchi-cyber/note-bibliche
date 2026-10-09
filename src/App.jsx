@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BookOpen, ChevronLeft, Plus, Search, Trash2, X } from "lucide-react";
 import AutoTextarea from "./components/AutoTextarea.jsx";
+import TextBlock from "./components/TextBlock.jsx";
 import VerseBlock from "./components/VerseBlock.jsx";
 import VerseSearchModal from "./components/VerseSearchModal.jsx";
+import { insertVerse, noteSearchText, notePreview, removeBlock, textBlock } from "./blocks.js";
 import { formatDate, loadNotes, saveNotes } from "./store.js";
 
 export default function App() {
@@ -10,8 +12,19 @@ export default function App() {
   const [activeId, setActiveId] = useState(null);
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [newId, setNewId] = useState(null); // nota appena creata: il cursore parte dal titolo
   // Su telefono si vede una schermata alla volta, come Note di Apple.
   const [view, setView] = useState("list");
+
+  // Dove si trova il cursore (blocco di testo + posizione). Serve a "Versetto"
+  // per inserire il passo nel punto giusto. È un ref: cambia a ogni tocco senza rifare il disegno.
+  const cursor = useRef({ id: null, pos: 0 });
+  const onCursor = useCallback((id, pos) => {
+    cursor.current = { id, pos };
+  }, []);
+  // Richiesta di mettere il cursore in un punto (dopo l'inserimento, sotto il versetto).
+  const [focusReq, setFocusReq] = useState(null);
+  const onFocused = useCallback(() => setFocusReq(null), []);
 
   // Salvataggio automatico: poco dopo ogni modifica e anche quando si chiude l'app.
   const latest = useRef(notes);
@@ -39,14 +52,7 @@ export default function App() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return sorted;
-    return sorted.filter(
-      (n) =>
-        n.title.toLowerCase().includes(q) ||
-        n.body.toLowerCase().includes(q) ||
-        (n.bodyAfter || "").toLowerCase().includes(q) ||
-        n.verses.some((v) => v.human.toLowerCase().includes(q) || v.verses.some((x) => x.t.toLowerCase().includes(q)))
-    );
+    return q ? sorted.filter((n) => noteSearchText(n).includes(q)) : sorted;
   }, [sorted, search]);
 
   const update = useCallback(
@@ -57,14 +63,29 @@ export default function App() {
     [shown?.id]
   );
 
+  const editText = useCallback(
+    (blockId, text) => {
+      const id = shown?.id;
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === id
+            ? { ...n, blocks: n.blocks.map((b) => (b.id === blockId ? { ...b, text } : b)), updatedAt: Date.now() }
+            : n
+        )
+      );
+    },
+    [shown?.id]
+  );
+
   const open = (id) => {
     setActiveId(id);
     setView("editor");
   };
 
   const addNote = () => {
-    const n = { id: Date.now(), title: "", body: "", verses: [], bodyAfter: "", updatedAt: Date.now() };
+    const n = { id: Date.now(), title: "", blocks: [textBlock()], updatedAt: Date.now() };
     setNotes((prev) => [n, ...prev]);
+    setNewId(n.id);
     open(n.id);
   };
 
@@ -75,10 +96,14 @@ export default function App() {
     setView("list");
   };
 
-  const insertVerse = (passage) => {
-    update({ verses: [...shown.verses, passage] });
+  const addVerse = (passage) => {
+    const { blocks, focus } = insertVerse(shown.blocks, cursor.current, passage);
+    update({ blocks });
+    setFocusReq(focus);
     setShowModal(false);
   };
+
+  const lastIndex = shown ? shown.blocks.length - 1 : 0;
 
   return (
     <div className="h-[100dvh] w-full flex overflow-hidden bg-bg text-fg">
@@ -121,9 +146,7 @@ export default function App() {
                 <span className="truncate text-[16px] font-semibold">{n.title || "Nuova nota"}</span>
                 <span className="shrink-0 text-[12px] text-muted">{formatDate(n.updatedAt)}</span>
               </div>
-              <p className="truncate text-[14px] text-muted">
-                {n.verses.length > 0 ? `📖 ${n.verses[0].human}` : n.body || "Nessun testo aggiuntivo"}
-              </p>
+              <p className="truncate text-[14px] text-muted">{notePreview(n) || "Nessun testo aggiuntivo"}</p>
             </button>
           ))}
         </div>
@@ -157,7 +180,9 @@ export default function App() {
                 Note
               </button>
               <div className="flex items-center">
+                {/* onMouseDown: non togliere il cursore dal testo quando si tocca il pulsante */}
                 <button
+                  onMouseDown={(e) => e.preventDefault()}
                   onClick={() => setShowModal(true)}
                   className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[15px] font-medium text-accent active:opacity-60"
                 >
@@ -178,35 +203,37 @@ export default function App() {
                   {new Date(shown.updatedAt).toLocaleString("it-IT", { dateStyle: "long", timeStyle: "short" })}
                 </p>
                 <AutoTextarea
+                  key={shown.id}
+                  autoFocus={shown.id === newId}
                   value={shown.title}
                   onChange={(e) => update({ title: e.target.value })}
+                  onKeyDown={(e) => {
+                    // Invio nel titolo: si passa a scrivere il testo
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setFocusReq({ id: shown.blocks[0].id, pos: 0 });
+                    }
+                  }}
                   placeholder="Titolo"
                   className="mb-2 text-[26px] font-bold leading-tight"
                 />
-                <AutoTextarea
-                  value={shown.body}
-                  onChange={(e) => update({ body: e.target.value })}
-                  placeholder="Scrivi qui la tua nota…"
-                  minRows={2}
-                  className="text-[18px] leading-relaxed"
-                />
 
-                {shown.verses.map((v, i) => (
-                  <VerseBlock
-                    key={`${v.human}-${v.version}-${i}`}
-                    verse={v}
-                    onRemove={() => update({ verses: shown.verses.filter((_, j) => j !== i) })}
-                  />
-                ))}
-
-                {shown.verses.length > 0 && (
-                  <AutoTextarea
-                    value={shown.bodyAfter || ""}
-                    onChange={(e) => update({ bodyAfter: e.target.value })}
-                    placeholder="Continua i tuoi appunti…"
-                    minRows={3}
-                    className="mt-1 text-[18px] leading-relaxed"
-                  />
+                {shown.blocks.map((b, i) =>
+                  b.type === "verse" ? (
+                    <VerseBlock key={b.id} verse={b.verse} onRemove={() => update({ blocks: removeBlock(shown.blocks, b.id) })} />
+                  ) : (
+                    <TextBlock
+                      key={b.id}
+                      block={b}
+                      // l'ultimo paragrafo è più alto: così c'è sempre spazio dove toccare per continuare a scrivere
+                      minRows={i === lastIndex && lastIndex > 0 ? 3 : 1}
+                      placeholder={shown.blocks.length === 1 ? "Scrivi qui la tua nota…" : i === lastIndex ? "Continua i tuoi appunti…" : ""}
+                      focusReq={focusReq}
+                      onFocused={onFocused}
+                      onChange={editText}
+                      onCursor={onCursor}
+                    />
+                  )
                 )}
               </div>
             </div>
@@ -216,7 +243,7 @@ export default function App() {
         )}
       </main>
 
-      {showModal && <VerseSearchModal onInsert={insertVerse} onClose={() => setShowModal(false)} />}
+      {showModal && <VerseSearchModal onInsert={addVerse} onClose={() => setShowModal(false)} />}
     </div>
   );
 }
