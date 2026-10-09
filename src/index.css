@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/* Colori ispirati a Note di Apple. Il tema segue quello del telefono
+   (scuro come nel tuo screenshot, chiaro altrimenti). */
+:root {
+  --bg: #ffffff;
+  --panel: #f6f6f7;
+  --fg: #1c1c1e;
+  --muted: #8e8e93;
+  --line: #e5e5ea;
+  --accent: #d98e04;
+  --bar: #aeaeb2;
+  --chip: #ececf0;
+  --sel: #fdf3d0;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e;
+    --panel: #121214;
+    --fg: #f2f2f7;
+    --muted: #8e8e93;
+    --line: #38383a;
+    --accent: #ffd60a;
+    --bar: #f2f2f7;
+    --chip: #2c2c2e;
+    --sel: #3a3420;
+  }
+}
+
+@theme {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-bar: var(--bar);
+  --color-chip: var(--chip);
+  --color-sel: var(--sel);
+  --font-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+  }
+
+  textarea,
+  input {
+    font: inherit;
+    color: inherit;
+    background: transparent;
+  }
+  textarea::placeholder,
+  input::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+  }
+}
