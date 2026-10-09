@@ -113,10 +113,11 @@ export default function App() {
   const lastIndex = shown ? shown.blocks.length - 1 : 0;
 
   return (
-    <div className="h-[100dvh] w-full flex overflow-hidden bg-bg text-fg">
+    <div className="relative h-[100dvh] w-full flex overflow-hidden bg-bg text-fg">
+      <div className="ambient pointer-events-none absolute inset-0" />
       {/* ELENCO */}
       <aside
-        className={`${view === "editor" ? "hidden" : "flex"} ${sidebarOpen ? "sm:flex" : "sm:hidden"} w-full sm:w-80 shrink-0 flex-col bg-panel border-r border-line`}
+        className={`${view === "editor" ? "hidden" : "flex"} ${sidebarOpen ? "sm:flex" : "sm:hidden"} relative z-10 w-full sm:w-80 shrink-0 flex-col glass max-sm:border-0 max-sm:shadow-none sm:m-3 sm:rounded-3xl sm:overflow-hidden`}
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <h1 className="px-4 pt-3 pb-1 text-[32px] font-bold sm:hidden">Note</h1>
@@ -180,7 +181,7 @@ export default function App() {
 
       {/* EDITOR */}
       <main
-        className={`${view === "list" ? "hidden" : "flex"} sm:flex flex-1 min-w-0 flex-col bg-bg`}
+        className={`${view === "list" ? "hidden" : "flex"} sm:flex relative flex-1 min-w-0 flex-col bg-bg sm:bg-transparent`}
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         {shown ? (
