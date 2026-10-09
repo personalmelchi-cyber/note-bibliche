@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { BookOpen, ChevronLeft, PanelLeftClose, PanelLeftOpen, Plus, Search, Trash2, X } from "lucide-react";
 import AutoTextarea from "./components/AutoTextarea.jsx";
 import TextBlock from "./components/TextBlock.jsx";
+import FormatBar from "./components/FormatBar.jsx";
 import VerseBlock from "./components/VerseBlock.jsx";
 import VerseSearchModal from "./components/VerseSearchModal.jsx";
 import { insertVerse, noteSearchText, notePreview, removeBlock, textBlock } from "./blocks.js";
+import { splitBlock } from "./richtext.js";
 import { formatDate, loadNotes, loadSidebar, saveNotes, saveSidebar } from "./store.js";
 
 export default function App() {
@@ -86,12 +88,12 @@ export default function App() {
   );
 
   const editText = useCallback(
-    (blockId, text) => {
+    (blockId, patch) => {
       const id = shown?.id;
       setNotes((prev) =>
         prev.map((n) =>
           n.id === id
-            ? { ...n, blocks: n.blocks.map((b) => (b.id === blockId ? { ...b, text } : b)), updatedAt: Date.now() }
+            ? { ...n, blocks: n.blocks.map((b) => (b.id === blockId ? { ...b, ...patch } : b)), updatedAt: Date.now() }
             : n
         )
       );
@@ -119,7 +121,7 @@ export default function App() {
   };
 
   const addVerse = (passage) => {
-    const { blocks, focus } = insertVerse(shown.blocks, cursor.current, passage);
+    const { blocks, focus } = insertVerse(shown.blocks, cursor.current, passage, splitBlock);
     update({ blocks });
     setFocusReq(focus);
     closeModal();
@@ -244,7 +246,7 @@ export default function App() {
 
             <div
               className="flex-1 overflow-y-auto"
-              style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom))" }}
+              style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom))" }}
             >
               <div className="mx-auto w-full max-w-2xl px-5 sm:px-8 pt-4">
                 <p className="mb-3 text-center text-[12px] text-muted">
@@ -302,6 +304,7 @@ export default function App() {
         )}
       </main>
 
+      {shown && <FormatBar />}
       {showModal && <VerseSearchModal onInsert={addVerse} onClose={closeModal} closing={modalClosing} />}
     </div>
   );

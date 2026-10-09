@@ -86,3 +86,24 @@ test("ricerca e anteprima", () => {
   assert.equal(notePreview(n), "Uno");
   assert.equal(notePreview({ title: "", blocks: [textBlock(""), verseBlock(verse("Luca 1:76")), textBlock("")] }), "📖 Luca 1:76");
 });
+
+test("con testo formattato: il versetto spezza anche l'HTML con la funzione di divisione", () => {
+  const a = { id: "a", type: "text", text: "Uno Due", html: "<b>Uno</b> Due" };
+  const split = (b, pos) => ({
+    before: { text: b.text.slice(0, pos).trim(), html: pos === 3 ? "<b>Uno</b>" : "" },
+    after: { text: b.text.slice(pos).trim(), html: "Due" },
+  });
+  const { blocks } = insertVerse([a], { id: "a", pos: 3 }, verse("A"), split);
+  assert.deepEqual(shape(blocks), ["T:Uno", "V:A", "T:Due"]);
+  assert.equal(blocks[0].html, "<b>Uno</b>");
+  assert.equal(blocks[2].html, "Due");
+});
+
+test("unendo testi formattati l'HTML si unisce con un a-capo", () => {
+  const a = { id: "a", type: "text", text: "Su", html: "<b>Su</b>" };
+  const v = verseBlock(verse("A"));
+  const c = textBlock("Giù");
+  const r = removeBlock([a, v, c], v.id);
+  assert.equal(r.length, 1);
+  assert.equal(r[0].html, "<b>Su</b><br>Giù");
+});

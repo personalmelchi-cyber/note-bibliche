@@ -101,3 +101,53 @@
     background: var(--panel);
   }
 }
+
+/* Testo formattato */
+.rich {
+  position: relative;
+  outline: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  caret-color: var(--accent);
+}
+.rich[data-empty="true"]::before {
+  content: attr(data-placeholder);
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: var(--muted);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.rich:has(li)::before {
+  display: none;
+}
+.rich ul,
+.rich ol {
+  margin: 0.15em 0;
+  padding-left: 1.5em;
+  white-space: normal;
+}
+.rich ul {
+  list-style: disc outside;
+}
+.rich ol {
+  list-style: decimal outside;
+}
+.rich li::marker {
+  color: var(--muted);
+}
+.rich b {
+  font-weight: 700;
+}
+.rich s {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+.rich span[style*="background-color"] {
+  border-radius: 0.25em;
+  padding: 0 0.12em;
+  margin: 0 -0.12em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}

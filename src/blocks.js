@@ -5,15 +5,23 @@
 //   - due blocchi di testo non restano mai attaccati: si fondono in uno
 
 export const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-export const textBlock = (text = "") => ({ id: uid(), type: "text", text });
+export const textBlock = (text = "", html) => (html === undefined ? { id: uid(), type: "text", text } : { id: uid(), type: "text", text, html });
 export const verseBlock = (verse) => ({ id: uid(), type: "verse", verse });
+
+export const escapeHtml = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+/** HTML di un blocco di testo: quello formattato se c'è, altrimenti il testo semplice. */
+export const blockHtml = (b) => (typeof b.html === "string" ? b.html : escapeHtml(b.text || "").replace(/\n/g, "<br>"));
 
 export function normalizeBlocks(blocks) {
   const out = [];
   for (const b of blocks) {
     const last = out[out.length - 1];
     if (b.type === "text" && last && last.type === "text") {
-      out[out.length - 1] = { ...last, text: [last.text, b.text].filter(Boolean).join("\n") };
+      const merged = { ...last, text: [last.text, b.text].filter(Boolean).join("\n") };
+      if (typeof last.html === "string" || typeof b.html === "string") {
+        merged.html = [blockHtml(last), blockHtml(b)].filter(Boolean).join("<br>");
+      }
+      out[out.length - 1] = merged;
     } else {
       out.push(b);
     }
@@ -28,26 +36,35 @@ export function normalizeBlocks(blocks) {
  * `cursor` = { id, pos }: blocco di testo e posizione del cursore al suo interno.
  * Il testo prima del cursore resta sopra il versetto, quello dopo passa sotto.
  * Se il cursore non è noto, il versetto va in fondo alla nota.
+ * `split(block, pos)` (facoltativo) spezza anche il testo formattato: ritorna {before, after} con {text, html}.
  * Ritorna i nuovi blocchi e dove mettere il cursore (all'inizio del testo sotto il versetto).
  */
-export function insertVerse(blocks, cursor, verse) {
+export function insertVerse(blocks, cursor, verse, split) {
   let idx = cursor ? blocks.findIndex((b) => b.id === cursor.id && b.type === "text") : -1;
   let pos;
   if (idx === -1) {
     idx = blocks.length - 1; // l'ultimo blocco è sempre di testo
-    pos = blocks[idx].text.length;
+    pos = split ? Number.MAX_SAFE_INTEGER : blocks[idx].text.length;
   } else {
-    pos = Math.min(Math.max(cursor.pos ?? 0, 0), blocks[idx].text.length);
+    // con il testo formattato le posizioni si contano nel DOM: il limite lo gestisce `split`
+    pos = Math.max(cursor.pos ?? 0, 0);
+    if (!split) pos = Math.min(pos, blocks[idx].text.length);
   }
 
   const b = blocks[idx];
-  const before = b.text.slice(0, pos).replace(/\s+$/, "");
-  const after = b.text.slice(pos).replace(/^\s+/, "");
-  const afterBlock = textBlock(after);
+  let beforePart, afterBlock;
+  if (split) {
+    const r = split(b, pos);
+    beforePart = { text: r.before.text, html: r.before.html };
+    afterBlock = textBlock(r.after.text, r.after.html);
+  } else {
+    beforePart = { text: b.text.slice(0, pos).replace(/\s+$/, "") };
+    afterBlock = textBlock(b.text.slice(pos).replace(/^\s+/, ""));
+  }
 
   const next = [
     ...blocks.slice(0, idx),
-    { ...b, text: before },
+    { ...b, ...beforePart },
     verseBlock(verse),
     afterBlock,
     ...blocks.slice(idx + 1),
