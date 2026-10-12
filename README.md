@@ -50,3 +50,23 @@ Per aggiungere un servizio diverso, una voce in `SOURCES` nello stesso file.
 - `src/bible/providers.js`: scarica i capitoli (prima dal proxy, poi diretto) con cache
 - `api/bible.js`: funzione serverless, accetta solo traduzioni dell'elenco
 - `src/App.jsx`, `src/components/`: interfaccia
+
+## App per App Store e Google Play (Capacitor)
+
+La stessa app è impacchettata come app nativa con [Capacitor](https://capacitorjs.com): cartelle `android/` e `ios/`, configurazione in `capacitor.config.json` (ID app: `app.scribae`).
+
+```bash
+npm run app:android   # compila, copia in android/ e apre Android Studio
+npm run app:ios       # compila, copia in ios/ e apre Xcode (serve un Mac)
+```
+
+Differenze rispetto alla versione web:
+
+- I versetti arrivano dalla funzione `api/bible.js` su `https://note-bibliche.vercel.app` (variabile `VITE_API_BASE` per cambiarla).
+- Sono offerte solo le traduzioni di pubblico dominio (`STORE_TRANSLATIONS` in `src/bible/available.js`): le altre richiedono una licenza per essere distribuite in un'app pubblica.
+- Le note sono copiate anche nella memoria nativa del telefono (`src/backup.js`), così iOS non può cancellarle per liberare spazio.
+- Niente service worker: i file sono già dentro l'app.
+
+Icone e schermata di avvio partono da `assets/` (`npx @capacitor/assets generate --android --ios`).
+Grafica e schermate per gli store sono in `store/graphics/` e si rigenerano con `npm run store:graphics`.
+Privacy e assistenza: `public/privacy.html` e `public/support.html` (pubblicate su Vercel).

@@ -7,6 +7,12 @@
 import { SOURCES, TRANSLATIONS } from "../src/bible/sources.js";
 
 export default async function handler(req, res) {
+  // L'app per iPhone/Android gira da un'origine locale (capacitor://localhost,
+  // https://localhost): serve il permesso CORS. I dati sono pubblici e in sola lettura.
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  if (req.method === "OPTIONS") return res.status(204).end();
+
   const { p, k, b, c } = req.query;
 
   const tr = TRANSLATIONS.find((t) => t.provider === p && t.key === k);

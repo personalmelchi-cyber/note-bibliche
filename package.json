@@ -7,14 +7,28 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test src/bible/parse.test.js src/blocks.test.js"
+    "test": "node --test src/bible/parse.test.js src/blocks.test.js",
+    "app": "vite build && cap sync",
+    "app:android": "vite build && cap sync android && cap open android",
+    "app:ios": "vite build && cap sync ios && cap open ios",
+    "store:graphics": "VITE_STORE_ONLY=1 vite build --outDir store/.preview && (vite preview --outDir store/.preview --port 4173 & sleep 3; python3 store/tools/screenshots.py; python3 store/tools/compose.py; kill %1)"
   },
   "dependencies": {
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4",
+    "@fontsource/source-serif-4": "^5.3.1",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
     "@tailwindcss/vite": "^4.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.0.0",

@@ -1,5 +1,6 @@
 import { SOURCES } from "./sources.js";
 import { displayName } from "./books.js";
+import { API_BASE } from "../platform.js";
 
 // Cache in memoria: lo stesso capitolo non viene scaricato due volte.
 const chapterCache = new Map();
@@ -7,7 +8,7 @@ const chapterCache = new Map();
 async function viaProxy(tr, book, chapter, signal) {
   // Funzione serverless di Vercel: nessun problema di CORS, risposte in cache.
   const qs = new URLSearchParams({ p: tr.provider, k: tr.key, b: String(book), c: String(chapter) });
-  const res = await fetch(`/api/bible?${qs}`, { signal });
+  const res = await fetch(`${API_BASE}/api/bible?${qs}`, { signal });
   if (res.status === 404) throw new Error("notfound");
   if (!res.ok) throw new Error("proxy");
   const json = await res.json(); // in locale (vite dev) /api non esiste: qui lancia e si passa al diretto

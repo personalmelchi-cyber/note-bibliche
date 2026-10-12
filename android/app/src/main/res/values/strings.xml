@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Scribae</string>
+    <string name="title_activity_main">Scribae</string>
+    <string name="package_name">app.scribae</string>
+    <string name="custom_url_scheme">app.scribae</string>
+</resources>

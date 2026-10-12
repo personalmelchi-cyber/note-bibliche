@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BookOpen, X } from "lucide-react";
 import VerseBlock from "./VerseBlock.jsx";
-import { LANGUAGES, TRANSLATIONS } from "../bible/sources.js";
+import { LANGUAGES, TRANSLATIONS } from "../bible/available.js";
 import { parseReference } from "../bible/parse.js";
 import { getPassage } from "../bible/providers.js";
 import { loadTranslation, saveTranslation } from "../store.js";

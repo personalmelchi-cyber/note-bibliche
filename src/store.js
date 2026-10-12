@@ -1,4 +1,5 @@
 import { migrateNote, textBlock } from "./blocks.js";
+import { mirror } from "./backup.js";
 
 const KEY = "note-bibliche-v1";
 const TR_KEY = "note-bibliche-translation";
@@ -29,7 +30,9 @@ export function loadNotes() {
 
 export function saveNotes(notes) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(notes));
+    const json = JSON.stringify(notes);
+    mirror(KEY, json);
+    localStorage.setItem(KEY, json);
   } catch {
     /* memoria piena o navigazione privata */
   }
@@ -44,6 +47,7 @@ export const loadTranslation = () => {
 };
 export const saveTranslation = (id) => {
   try {
+    mirror(TR_KEY, id);
     localStorage.setItem(TR_KEY, id);
   } catch {
     /* ignora */
@@ -70,6 +74,7 @@ export const loadSidebar = () => {
 };
 export const saveSidebar = (open) => {
   try {
+    mirror(SB_KEY, open ? "open" : "closed");
     localStorage.setItem(SB_KEY, open ? "open" : "closed");
   } catch {
     /* ignora */

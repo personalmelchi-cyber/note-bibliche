@@ -2,7 +2,7 @@
 // - pagine: prima la rete, in mancanza la copia salvata
 // - file dell'app (hash nel nome): copia salvata, aggiornata in background
 // - /api e siti esterni: mai in cache qui (i versetti sono salvati nelle note)
-const CACHE = "note-bibliche-v1";
+const CACHE = "note-bibliche-v2";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["/"])));
@@ -23,6 +23,7 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   if (req.method !== "GET" || url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.endsWith(".html")) return; // pagine a parte (privacy, assistenza)
 
   if (req.mode === "navigate") {
     e.respondWith(
