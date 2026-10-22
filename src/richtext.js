@@ -1,3 +1,4 @@
+import { getKeyboardHeight } from "./platform.js";
 import { blockHtml } from "./blocks.js";
 
 // Testo formattato: grassetto, corsivo, barrato, elenchi ed evidenziatore.
@@ -271,7 +272,11 @@ export function keepCaretVisible() {
   if (!rect || (rect.height === 0 && rect.top === 0)) rect = node.getBoundingClientRect(); // riga vuota
 
   const vv = window.visualViewport;
-  const visibleBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+  const visibleBottom = Math.min(
+    vv ? vv.offsetTop + vv.height : window.innerHeight,
+    window.innerHeight - getKeyboardHeight(), // tastiera dell'app installata
+    scroller.getBoundingClientRect().bottom
+  );
   const bar = document.querySelector("[role=toolbar]");
   const barShown = bar && bar.parentElement.getAttribute("aria-hidden") === "false";
   const limit = Math.min(barShown ? bar.getBoundingClientRect().top : Infinity, visibleBottom) - 24;

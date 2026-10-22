@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bold, Highlighter, Italic, List, ListOrdered, Strikethrough, X } from "lucide-react";
+import { getKeyboardHeight, isNative } from "../platform.js";
 import { PALETTE, getRange, getVerseSelection, highlightCss, highlightRange, keepCaretVisible, cleanVerseHtml, setRange } from "../richtext.js";
 
 const inRich = () => !!document.activeElement?.closest?.("[data-rich]");
@@ -13,7 +14,10 @@ function useKeyboardInset() {
     const update = () => {
       // altezza della pagina "intera" meno la parte visibile sopra la tastiera
       const layoutH = document.documentElement.clientHeight || window.innerHeight;
-      const kb = Math.max(0, Math.round(layoutH - vv.height - vv.offsetTop));
+      // nell'app installata il plugin accorcia la pagina sopra la tastiera: anche
+      // questa differenza indica quanto spazio occupa la tastiera
+      const bodyGap = isNative ? window.innerHeight - document.body.getBoundingClientRect().height : 0;
+      const kb = Math.max(0, Math.round(layoutH - vv.height - vv.offsetTop), getKeyboardHeight(), Math.round(bodyGap));
       document.documentElement.style.setProperty("--kb", `${kb}px`); // la nota ne tiene conto nello spazio in fondo
       setInset(kb);
     };
@@ -26,11 +30,13 @@ function useKeyboardInset() {
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
+    window.addEventListener("scribae:keyboard", update);
     document.addEventListener("focusin", settle);
     document.addEventListener("focusout", settle);
     return () => {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
+      window.removeEventListener("scribae:keyboard", update);
       document.removeEventListener("focusin", settle);
       document.removeEventListener("focusout", settle);
       timers.forEach(clearTimeout);

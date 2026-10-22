@@ -8,7 +8,8 @@ import { SplashScreen } from "@capacitor/splash-screen";
 import { Keyboard } from "@capacitor/keyboard";
 import App from "./App.jsx";
 import "./index.css";
-import { isNative } from "./platform.js";
+import { isNative, setKeyboardHeight } from "./platform.js";
+import { keepCaretVisible } from "./richtext.js";
 import { restoreFromNative } from "./backup.js";
 
 function render() {
@@ -40,12 +41,21 @@ if (isNative) {
 function setupNative() {
   // Tastiera (solo iPhone):
   // - niente barra "∧ ∨ ✓" sopra la tastiera, tipica dei moduli web
-  // - la pagina intera non scorre: si restringe sopra la tastiera (resize "native"
-  //   in capacitor.config.json), così l'intestazione con «Versetto» resta in vista
+  // - la pagina intera non scorre: si accorcia sopra la tastiera (resize "body"
+  //   in capacitor.config.json: niente angoli neri), così l'intestazione con «Versetto» resta in vista
   //   e scorre solo il testo della nota.
   try {
     Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {});
     Keyboard.setScroll({ isDisabled: true }).catch(() => {});
+    // Appena la tastiera sale, la riga del cursore viene portata sopra la tastiera
+    // e sopra la barra di formattazione, senza aspettare che si inizi a scrivere.
+    const reveal = () => [0, 60, 180].forEach((ms) => setTimeout(keepCaretVisible, ms));
+    Keyboard.addListener("keyboardWillShow", (info) => setKeyboardHeight(info?.keyboardHeight));
+    Keyboard.addListener("keyboardDidShow", (info) => {
+      setKeyboardHeight(info?.keyboardHeight);
+      reveal();
+    });
+    Keyboard.addListener("keyboardWillHide", () => setKeyboardHeight(0));
   } catch {
     /* non su iOS: ignora */
   }

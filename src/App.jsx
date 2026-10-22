@@ -7,6 +7,7 @@ import FormatBar from "./components/FormatBar.jsx";
 import VerseBlock from "./components/VerseBlock.jsx";
 import VerseSearchModal from "./components/VerseSearchModal.jsx";
 import SwipeRow from "./components/SwipeRow.jsx";
+import { isNative } from "./platform.js";
 import { insertVerse, noteSearchText, notePreview, removeBlock, textBlock } from "./blocks.js";
 import { splitBlock } from "./richtext.js";
 import { isThisWeek, loadNotes, loadSidebar, rowTime, saveNotes, saveSidebar } from "./store.js";
@@ -164,7 +165,7 @@ export default function App() {
   const lastIndex = shown ? shown.blocks.length - 1 : 0;
 
   return (
-    <div className="relative h-[100dvh] w-full flex overflow-hidden bg-bg text-fg">
+    <div className={`relative ${isNative ? "h-full" : "h-[100dvh]"} w-full flex overflow-hidden bg-bg text-fg`}>
       <div className="ambient pointer-events-none absolute inset-0" />
       {/* ELENCO */}
       <aside
