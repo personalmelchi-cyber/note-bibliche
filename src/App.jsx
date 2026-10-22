@@ -6,6 +6,7 @@ import Logo from "./components/Logo.jsx";
 import FormatBar from "./components/FormatBar.jsx";
 import VerseBlock from "./components/VerseBlock.jsx";
 import VerseSearchModal from "./components/VerseSearchModal.jsx";
+import SwipeRow from "./components/SwipeRow.jsx";
 import { insertVerse, noteSearchText, notePreview, removeBlock, textBlock } from "./blocks.js";
 import { splitBlock } from "./richtext.js";
 import { isThisWeek, loadNotes, loadSidebar, rowTime, saveNotes, saveSidebar } from "./store.js";
@@ -139,6 +140,13 @@ export default function App() {
     open(n.id);
   };
 
+  // Eliminazione dall'elenco con lo scorrimento a sinistra (nessuna conferma, come in Note di Apple).
+  const [swipeId, setSwipeId] = useState(null);
+  const deleteNote = (id) => {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    if (activeId === id) setActiveId(null);
+  };
+
   const remove = () => {
     if (!shown || !window.confirm("Eliminare questa nota?")) return;
     setNotes((prev) => prev.filter((n) => n.id !== shown.id));
@@ -204,21 +212,23 @@ export default function App() {
           {groups.map((g) => (
             <section key={g.label}>
               <h2 className="px-2 pt-4 pb-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-muted">{g.label}</h2>
-              <div className="overflow-hidden rounded-2xl bg-panel/80">
+              <div className="overflow-hidden rounded-2xl bg-panel">
                 {g.items.map((n, i) => (
-                  <button
+                  <SwipeRow
                     key={n.id}
-                    onClick={() => open(n.id)}
-                    className={`block w-full px-4 py-3 text-left active:opacity-60 ${i ? "border-t border-line" : ""} ${
-                      n.id === shown?.id ? "sm:bg-sel" : ""
-                    }`}
+                    id={n.id}
+                    openId={swipeId}
+                    setOpenId={setSwipeId}
+                    onOpen={open}
+                    onDelete={deleteNote}
+                    className={`${i ? "border-t border-line" : ""} ${n.id === shown?.id ? "sm:[&>button:last-child]:bg-sel" : ""}`}
                   >
                     <span className="block truncate text-[16.5px] font-bold">{n.title || "Nuova nota"}</span>
                     <span className="mt-0.5 flex gap-2 text-[14px] text-muted">
                       <span className="shrink-0">{rowTime(n.updatedAt)}</span>
                       <span className="truncate">{notePreview(n) || "Nessun testo aggiuntivo"}</span>
                     </span>
-                  </button>
+                  </SwipeRow>
                 ))}
               </div>
             </section>
