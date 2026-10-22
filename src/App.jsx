@@ -300,9 +300,14 @@ export default function App() {
             <div
               data-scroll
               className="flex-1 overflow-y-auto"
-              style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom) + var(--kb, 0px))" }}
+              style={{
+                paddingBottom: "calc(var(--note-pad, 2.5rem) + env(safe-area-inset-bottom) + var(--kb, 0px))",
+                WebkitOverflowScrolling: "touch",
+                overscrollBehaviorY: isNative ? "auto" : undefined,
+              }}
             >
-              <div className="mx-auto w-full max-w-2xl px-5 sm:px-8 pt-4">
+              {/* poco più alta dello spazio visibile: la nota si scorre (con il rimbalzo) anche se è corta */}
+              <div className="mx-auto w-full max-w-2xl px-5 sm:px-8 pt-4" style={isNative ? { minHeight: "calc(100% + 1px)" } : undefined}>
                 <p className="mb-3 text-center text-[13px] text-muted">
                   {new Date(shown.updatedAt).toLocaleDateString("it-IT", { dateStyle: "long" })} ·{" "}
                   {new Date(shown.updatedAt).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}

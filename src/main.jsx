@@ -56,6 +56,13 @@ function setupNative() {
       reveal();
     });
     Keyboard.addListener("keyboardWillHide", () => setKeyboardHeight(0));
+    // a tastiera chiusa la pagina torna sempre a tutta altezza (anche se è stata
+    // chiusa trascinando), così la nota si può scorrere su tutto lo schermo
+    Keyboard.addListener("keyboardDidHide", () => {
+      document.body.style.height = "";
+      setKeyboardHeight(0);
+      window.scrollTo(0, 0);
+    });
   } catch {
     /* non su iOS: ignora */
   }

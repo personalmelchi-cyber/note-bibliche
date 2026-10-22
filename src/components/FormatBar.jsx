@@ -18,7 +18,9 @@ function useKeyboardInset() {
       // questa differenza indica quanto spazio occupa la tastiera
       const bodyGap = isNative ? window.innerHeight - document.body.getBoundingClientRect().height : 0;
       const kb = Math.max(0, Math.round(layoutH - vv.height - vv.offsetTop), getKeyboardHeight(), Math.round(bodyGap));
-      document.documentElement.style.setProperty("--kb", `${kb}px`); // la nota ne tiene conto nello spazio in fondo
+      // nel browser la nota aggiunge in fondo lo spazio coperto dalla tastiera; nell'app
+      // installata no: la pagina è già accorciata sopra la tastiera (niente spazio doppio)
+      document.documentElement.style.setProperty("--kb", `${isNative ? 0 : kb}px`);
       setInset(kb);
     };
     // su iPhone la tastiera arriva con un'animazione: si ricontrolla finché non si ferma
@@ -53,6 +55,11 @@ export default function FormatBar({ onVerseChange }) {
   const [picker, setPicker] = useState(false);
   const [mode, setMode] = useState("text"); // "text": si scrive; "verse": si sta selezionando un versetto
   const hideTimer = useRef(null);
+
+  // Spazio in fondo alla nota: serve solo mentre la barra è in vista (per non coprire l'ultima riga).
+  useEffect(() => {
+    document.documentElement.style.setProperty("--note-pad", visible ? "6rem" : "2.5rem");
+  }, [visible]);
 
   // Quando la barra compare o la tastiera cambia altezza, la riga in cui si scrive deve restare visibile.
   useEffect(() => {
