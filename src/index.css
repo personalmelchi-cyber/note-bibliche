@@ -145,9 +145,17 @@
 }
 .rich ul,
 .rich ol {
-  margin: 0.15em 0;
+  margin: 0.85em 0 0;
   padding-left: 1.5em;
   white-space: normal;
+}
+.rich > ul:first-child,
+.rich > ol:first-child {
+  margin-top: 0;
+}
+/* voci dell'elenco un po' più distanziate tra loro, ma meno dei paragrafi */
+.rich li + li {
+  margin-top: 0.35em;
 }
 .rich ul {
   list-style: disc outside;
@@ -194,8 +202,14 @@
 }
 
 /* Paragrafi: un po' di aria in più tra uno e l'altro, per distinguerli */
-.rich p {
-  margin: 0.55em 0 0;
+/* Spazio tra un paragrafo e l'altro: ben visibile, come una mezza riga in più.
+   Anche i blocchi <div> che iOS a volte crea con Invio contano come paragrafi. */
+.rich p,
+.rich > div {
+  margin: 0.85em 0 0;
+}
+.rich > div:first-child {
+  margin-top: 0;
 }
 .rich > p:first-child,
 .rich li > p:first-child {
