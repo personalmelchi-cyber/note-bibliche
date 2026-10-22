@@ -18,6 +18,10 @@
     },
     "StatusBar": {
       "overlaysWebView": true
+    },
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
     }
   }
 }

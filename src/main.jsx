@@ -5,6 +5,7 @@ import "@fontsource/source-serif-4/600.css";
 import "@fontsource/source-serif-4/400-italic.css";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { SplashScreen } from "@capacitor/splash-screen";
+import { Keyboard } from "@capacitor/keyboard";
 import App from "./App.jsx";
 import "./index.css";
 import { isNative } from "./platform.js";
@@ -37,6 +38,25 @@ if (isNative) {
 }
 
 function setupNative() {
+  // Tastiera (solo iPhone):
+  // - niente barra "∧ ∨ ✓" sopra la tastiera, tipica dei moduli web
+  // - la pagina intera non scorre: si restringe sopra la tastiera (resize "native"
+  //   in capacitor.config.json), così l'intestazione con «Versetto» resta in vista
+  //   e scorre solo il testo della nota.
+  try {
+    Keyboard.setAccessoryBarVisible({ isVisible: false }).catch(() => {});
+    Keyboard.setScroll({ isDisabled: true }).catch(() => {});
+  } catch {
+    /* non su iOS: ignora */
+  }
+  // Rete di sicurezza: se iOS sposta comunque la pagina, la rimette in cima.
+  const pin = () => {
+    if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);
+  };
+  window.addEventListener("scroll", pin, { passive: true });
+  window.visualViewport?.addEventListener("resize", pin);
+  window.visualViewport?.addEventListener("scroll", pin);
+
   try {
     const dark = window.matchMedia("(prefers-color-scheme: dark)");
     const applyBar = () =>
