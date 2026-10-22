@@ -8,7 +8,7 @@ import { SplashScreen } from "@capacitor/splash-screen";
 import { Keyboard } from "@capacitor/keyboard";
 import App from "./App.jsx";
 import "./index.css";
-import { isNative, setKeyboardHeight } from "./platform.js";
+import { getKeyboardHeight, isNative, setKeyboardHeight } from "./platform.js";
 import { keepCaretVisible } from "./richtext.js";
 import { restoreFromNative } from "./backup.js";
 
@@ -59,6 +59,36 @@ function setupNative() {
   } catch {
     /* non su iOS: ignora */
   }
+  // Come in Note di Apple: scorrendo la nota, se il dito scende fino alla tastiera
+  // (o alla barra di formattazione appena sopra), la tastiera si chiude.
+  let drag = null;
+  document.addEventListener(
+    "touchstart",
+    (e) => {
+      const t = e.touches[0];
+      drag = t && e.target.closest?.("[data-scroll]") ? { y: t.clientY } : null;
+    },
+    { passive: true }
+  );
+  document.addEventListener(
+    "touchmove",
+    (e) => {
+      const t = e.touches[0];
+      if (!drag || !t) return;
+      const kb = Math.max(getKeyboardHeight(), window.innerHeight - document.body.getBoundingClientRect().height);
+      if (kb < 80) return; // tastiera chiusa
+      const keyboardTop = window.innerHeight - kb;
+      const movingDown = t.clientY - drag.y > 24;
+      if (movingDown && t.clientY > keyboardTop - 70) {
+        drag = null;
+        document.activeElement?.blur?.();
+        Keyboard.hide().catch(() => {});
+      }
+    },
+    { passive: true }
+  );
+  document.addEventListener("touchend", () => (drag = null), { passive: true });
+
   // Rete di sicurezza: se iOS sposta comunque la pagina, la rimette in cima.
   const pin = () => {
     if (window.scrollY !== 0 || window.scrollX !== 0) window.scrollTo(0, 0);

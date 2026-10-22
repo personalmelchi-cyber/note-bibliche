@@ -40,6 +40,36 @@ export default function TextBlock({ block, placeholder, minRows = 1, focusReq, o
     onFocused();
   }, [focusReq, block.id, onCursor, onFocused]);
 
+  // Doppio spazio = punto (". "), come la scorciatoia di iOS. Nell'app installata
+  // iOS non la applica più all'editor, quindi la facciamo noi. Se iOS la applica da
+  // sé, il secondo spazio non arriva mai qui come " " dopo uno spazio: nessun doppione.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onBeforeInput = (e) => {
+      if (e.inputType !== "insertText" || e.data !== " " || e.isComposing) return;
+      const sel = window.getSelection();
+      if (!sel || !sel.isCollapsed || !sel.rangeCount) return;
+      const node = sel.anchorNode;
+      const off = sel.anchorOffset;
+      if (!node || node.nodeType !== 3 || off < 2 || !el.contains(node)) return;
+      const text = node.nodeValue;
+      const prev = text[off - 1];
+      const before = text[off - 2];
+      // spazio (anche non separabile) preceduto da una lettera, un numero o una chiusura
+      if (!/[ \u00a0]/.test(prev) || !/[\p{L}\p{N})\]»"'’]/u.test(before)) return;
+      e.preventDefault();
+      const r = document.createRange();
+      r.setStart(node, off - 1);
+      r.setEnd(node, off);
+      sel.removeAllRanges();
+      sel.addRange(r);
+      document.execCommand("insertText", false, ". ");
+    };
+    el.addEventListener("beforeinput", onBeforeInput);
+    return () => el.removeEventListener("beforeinput", onBeforeInput);
+  }, []);
+
   const onInput = () => {
     const el = ref.current;
     normalizeParagraphs(el);
@@ -78,6 +108,10 @@ export default function TextBlock({ block, placeholder, minRows = 1, focusReq, o
       data-placeholder={placeholder || ""}
       contentEditable
       suppressContentEditableWarning
+      autoCapitalize="sentences"
+      autoCorrect="on"
+      spellCheck
+      inputMode="text"
       role="textbox"
       aria-multiline="true"
       className="rich text-[16px] leading-[1.4]"
